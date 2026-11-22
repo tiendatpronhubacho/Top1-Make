@@ -186,14 +186,14 @@ workflows:
           		3105L101 /* background_features.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = background_features.jpg; sourceTree = "<group>"; };
           		3105L102 /* background_settings.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = background_settings.jpg; sourceTree = "<group>"; };
           		3105L300 /* background_music.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = background_music.mp3; sourceTree = "<group>"; };
-          		3106Z100 /* worse_query.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = worse_query.m; sourceTree = "<group>"; };
-          		3106Z101 /* worse_query.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = worse_query.h; sourceTree = "<group>"; };
-          		3106Z301 /* SandboxDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SandboxDiagnostics.swift; sourceTree = "<group>"; };
-          		3106Z303 /* GrantRetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrantRetry.swift; sourceTree = "<group>"; };
-          		3106Z401 /* SandboxAccess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SandboxAccess.swift; sourceTree = "<group>"; };
-          		3106Z403 /* BackupError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupError.swift; sourceTree = "<group>"; };
-3106Z501 /* SandboxDiagnosticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SandboxDiagnosticsView.swift; sourceTree = "<group>"; };
-DDDD1111EEEE2222FFFF3333 /* WQCombined.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = WQCombined.m; path = WQCombined.m; sourceTree = "<group>"; };
+          		          3106Z100 /* worse_query.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = worse_query.m; sourceTree = "<group>"; };
+          3106Z101 /* worse_query.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = worse_query.h; sourceTree = "<group>"; };
+          3106Z301 /* SandboxDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SandboxDiagnostics.swift; sourceTree = "<group>"; };
+          3106Z303 /* GrantRetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrantRetry.swift; sourceTree = "<group>"; };
+          3106Z401 /* SandboxAccess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SandboxAccess.swift; sourceTree = "<group>"; };
+          3106Z403 /* BackupError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupError.swift; sourceTree = "<group>"; };
+          3106Z501 /* SandboxDiagnosticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SandboxDiagnosticsView.swift; sourceTree = "<group>"; };
+          DDDD1111EEEE2222FFFF3333 /* WQCombined.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = WQCombined.m; path = WQCombined.m; sourceTree = "<group>"; };
           /* End PBXFileReference section */
           
           /* Begin PBXFrameworksBuildPhase section */
