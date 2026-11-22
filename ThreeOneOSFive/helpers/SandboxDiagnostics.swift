@@ -88,6 +88,12 @@ enum SandboxDiagnostics {
         lines.append("iOS \(AppInfo.osVersion) (\(AppInfo.osBuild)) — \(AppInfo.machineName)")
         lines.append("App: \(AppInfo.appVersion) — Generated: \(Date())")
         lines.append("Backend: \(SandboxAccess.backend.displayName)")
+        if SandboxAccess.backend == .kernel {
+            let kernelState = KernelExploit.kernelRWEstablished.map { $0 ? "established" : "not established" } ?? "not run"
+            let escapeState = KernelExploit.sandboxEscapeVerified.map { $0 ? "verified" : "not verified" } ?? "not run"
+            lines.append("Kernel R/W: \(kernelState)")
+            lines.append("Sandbox escape: \(escapeState)")
+        }
         lines.append("App Group: \(SandboxAccess.appGroup ?? "(none)")")
         if let probeResult {
             lines.append("Probe: \(probeResult ? "ok" : "FAILED")")
