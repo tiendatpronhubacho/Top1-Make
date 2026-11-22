@@ -95,6 +95,7 @@ workflows:
           		3106Z302 /* GrantRetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3106Z303; };
           		3106Z400 /* SandboxAccess.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3106Z401; };
           		3106Z402 /* BackupError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3106Z403; };
+          		3106Z500 /* SandboxDiagnosticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3106Z501; };
           		EEEE1111FFFF2222AAAA3333 /* WQCombined.m in Sources */ = {isa = PBXBuildFile; fileRef = DDDD1111EEEE2222FFFF3333 /* WQCombined.m */; };
           /* End PBXBuildFile section */
           
@@ -191,7 +192,8 @@ workflows:
           		3106Z303 /* GrantRetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrantRetry.swift; sourceTree = "<group>"; };
           		3106Z401 /* SandboxAccess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SandboxAccess.swift; sourceTree = "<group>"; };
           		3106Z403 /* BackupError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupError.swift; sourceTree = "<group>"; };
-          		DDDD1111EEEE2222FFFF3333 /* WQCombined.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = WQCombined.m; path = WQCombined.m; sourceTree = "<group>"; };
+3106Z501 /* SandboxDiagnosticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SandboxDiagnosticsView.swift; sourceTree = "<group>"; };
+DDDD1111EEEE2222FFFF3333 /* WQCombined.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = WQCombined.m; path = WQCombined.m; sourceTree = "<group>"; };
           /* End PBXFileReference section */
           
           /* Begin PBXFrameworksBuildPhase section */
@@ -260,6 +262,7 @@ workflows:
           		3105A404 /* views */ = {
           			isa = PBXGroup;
           			children = (
+          			3106Z501 /* SandboxDiagnosticsView.swift */,
           				3105A098 /* DesignSystem.swift */,
           				3105A023 /* SettingsView.swift */,
           				3105A024 /* LogView.swift */,
@@ -420,6 +423,8 @@ workflows:
           			isa = PBXSourcesBuildPhase;
           			buildActionMask = 2147483647;
           			files = (
+          			3106Z402 /* BackupError.swift in Sources */,
+3106Z500 /* SandboxDiagnosticsView.swift in Sources */,
           				3105A200, 3105A201, 3105A203, 3105A204,
           				3105A205, 3105A206, 3105A207, 3105A209,
           				3105A210, 3105A220, 3105A221, 3105A222, 3105A223,
