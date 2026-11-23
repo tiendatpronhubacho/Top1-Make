@@ -16,7 +16,7 @@
 
 "update.title" = "Có bản cập nhật";
 "update.message" = "3106 %@ đã có trên GitHub.";
-"update.agree" = "Cập nhật";
+"update.agree" = "Đồng ý";
 "update.dismiss" = "Không hiển thị lại";
 "patch.error.wrong_password" = "Sai mật khẩu.";
 
@@ -27,10 +27,24 @@
 "attribution.open" = "Mở liên kết";
 "attribution.share" = "Chia sẻ liên kết";
 
+"onboarding.step" = "Bước %@ / %@";
+"onboarding.language_title" = "Chọn ngôn ngữ";
+"onboarding.language_subtitle" = "Bạn có thể đổi lại trong Cài đặt.";
+"onboarding.language_hint" = "Đã chọn: %@";
+"onboarding.welcome_title" = "Chào mừng đến với 3106";
+"onboarding.welcome_message" = "3106";
+"onboarding.welcome_badge" = "Định danh chính thức 3106";
 "onboarding.versions_title" = "Phiên bản iOS được hỗ trợ";
 "onboarding.versions_subtitle" = "3106 đã được xác minh trên các khoảng bên dưới. Build ngoài phạm vi sẽ bị chặn.";
 "onboarding.versions_footer" = "Thiết bị này: iOS %@ (%@)";
+"onboarding.beta" = "Beta";
+"onboarding.developer_beta" = "Beta nhà phát triển %@";
+"onboarding.public_beta" = "Beta công khai %@";
+"onboarding.install_title" = "Yêu cầu chứng chỉ";
 "onboarding.install_message" = "3106 dùng worse_query trên iOS 26.7+ và 27.x. Cần App Group entitlement: ký bằng AltStore, SideStore hoặc Sideloadly (Apple ID miễn phí là đủ), hoặc App ID rõ ràng có App Groups.";
+"onboarding.install_ok" = "Hoạt động với chứng chỉ doanh nghiệp, bao gồm eSign và các bản cài enterprise tương tự.";
+"onboarding.install_bad" = "Không hoạt động với SideStore, AltStore, 3uTools hoặc LiveContainer.";
+"onboarding.install_jailbreak" = "Trên iOS 17 đến iOS 18.7.1, 3106 sẽ không hoạt động nếu thiết bị đã jailbreak.";
 "onboarding.install_footer" = "Hãy dùng chứng chỉ được hỗ trợ trên thiết bị chưa jailbreak trước khi tiếp tục.";
 
 "dashboard.exploit_access" = "Quyền exploit";
@@ -46,11 +60,14 @@
 "dashboard.device_name" = "Tên thiết bị";
 "dashboard.hardware_model" = "Model phần cứng";
 "dashboard.access_footer" = "App chỉ báo thành công sau khi tệp hệ thống thực sự mở được ở chế độ đọc và ghi.";
+"dashboard.unsupported_footer" = "iOS %@ (%@) nằm ngoài phạm vi đã xác minh. Hỗ trợ: iOS 17.0–17.7.x, iOS 18.0–18.7.1, iOS 26.0–26.6.1, iOS 27.0 Developer Beta 1–4 và Public Beta 1–2.";
 "dashboard.app_browser" = "Duyệt dữ liệu ứng dụng";
 "dashboard.browser" = "Trình duyệt file";
 "dashboard.open_browser" = "Mở trình duyệt file";
 "dashboard.browser_footer" = "Duyệt và đọc dữ liệu từ mọi ứng dụng và system container trên thiết bị.";
 "dashboard.device_actions_warning" = "Hãy lưu thay đổi trước khi khởi động lại thiết bị.";
+"dashboard.unsupported_device" = "Thiết bị không được hỗ trợ";
+"dashboard.unsupported_message" = "iOS %@ chưa được hỗ trợ.\n\nCác phiên bản hiện được hỗ trợ:\n• iOS 17.0–17.7.x\n• iOS 18.0–18.7.1\n• iOS 26.0–26.6.1\n• iOS 27.0 Developer Beta 1–4\n• iOS 27.0 Public Beta 1–2";
 "dashboard.installation" = "Cài đặt ứng dụng";
 "dashboard.kernel_status" = "Trạng thái kernel";
 "dashboard.kernel_running" = "Đang kích hoạt…";
@@ -233,11 +250,7 @@
 "status.not_attempted" = "Chưa thử";
 "status.ok_via" = "OK qua %@";
 "status.failed_via" = "THẤT BẠI %@ (%lld)";
-"status.unsupported_a10_ios17" = "Không hỗ trợ: trên chip A10 (iPhone 7, iPad 6/7) chuỗi khai thác nhân bị treo và khởi động lại thiết bị trên iOS 17, nên tính năng này không được bật. Bản thân phiên bản hệ điều hành vẫn được hỗ trợ — đây không phải yêu cầu cập nhật; riêng chip này không thể giành quyền truy cập vùng chứa trên iOS 17. Cùng thiết bị đó trên iOS 18 trở lên không bị ảnh hưởng.";
-"{{SECRET_hisgwbph}}" = "Không hỗ trợ: phát hiện môi trường đã bẻ khóa. Trên thiết bị bẻ khóa, hộp cát có thể đã bị tweak sửa đổi nên không thể quy kết thành công hay thất bại của chuỗi khai thác nhân cho ứng dụng — vì vậy chuỗi này không được chạy. Hãy dùng thiết bị chưa bẻ khóa.";
 "status.unsupported_reason" = "Không hỗ trợ: %@";
-"status.unsupported_ios18_patched" = "Không hỗ trợ: Apple đã vá lỗ hổng kernel (CVE-2025-43520) mà 3106 dựa vào trên iOS 17/18 trong iOS 18.7.2, nên 18.7.2 trở lên không thể truy cập container ứng dụng. Lựa chọn: giữ thiết bị ở iOS 18.7.1 hoặc thấp hơn, dùng thiết bị iOS 26 trở lên (không cần lỗ hổng kernel), hoặc dùng trình quản lý tệp có quyền root trên thiết bị đã jailbreak.";
-"status.unsupported_ios27_build" = "Không hỗ trợ: Apple đã vá sandbox escape cho iOS 27.3; chỉ các build đã xác minh mới hoạt động (%@). Không cập nhật lên build 27.3 mới hơn.";
 "method.simulator_preview" = "bản xem trước Simulator";
 
 "settings.title" = "Cài đặt";
@@ -254,6 +267,10 @@
 "settings.tab_bar_footer" = "Đã chọn %lld/%lld vị trí. Trang chủ luôn hiển thị; hãy tắt một mục trước khi bật mục khác khi đã đủ.";
 "settings.tab_bar_fixed" = "Luôn hiển thị";
 "settings.github" = "GitHub";
+"settings.beta_build" = "Beta %lld · %@";
+"settings.developer_beta_build" = "Developer Beta %lld · %@";
+"settings.developer_public_beta_build" = "Developer Beta %lld / Public Beta %lld · %@";
+"settings.supported_range_summary" = "Đã xác minh: iOS 17.0–17.7.x, iOS 18.0–18.7.1, iOS 26.0–26.6.1, iOS 27.0 Developer Beta 1–4 và Public Beta 1–2.";
 
 "kernel.section_title" = "Kernel Exploit";
 "kernel.run_exploit" = "Chạy Kernel Exploit";
@@ -263,7 +280,7 @@
 "kernel.footer_warning" = "Chỉ chạy trong RAM (không tồn tại sau reboot). Nếu thất bại, hãy mở lại app rồi thử lại.";
 "kernel.auto_run" = "Tự chạy khi mở app";
 "kernel.failed_requires_relaunch" = "Mở lại app trước khi thử lại.";
-"settings.supported_versions_footer" = "iOS 26.0–26.6.1 dùng bad_query; 26.7–26.7.2 và 27.0–27.2 dùng worse_query. iOS 27.3 chỉ hỗ trợ beta 1 (build 24C5037i, kiểm tra theo số build); Apple đã vá từ beta 2. worse_query cần App Group.";
+"settings.supported_versions_footer" = "iOS 26.0–26.6.1 dùng bad_query; 26.7–26.7.2 và 27.0–27.2 dùng worse_query. iOS 27.3 beta là thử nghiệm. worse_query cần App Group.";
 "settings.sandbox_token" = "Token sandbox";
 "settings.generate_token" = "Tạo token";
 "settings.token_footer" = "Khả dụng sau khi exploit cấp quyền thành công.";
@@ -429,11 +446,6 @@
 "sandbox.diag.probe_not_run" = "Chưa chạy";
 "sandbox.diag.probe_running" = "Đang dò…";
 "sandbox.diag.probe_run" = "Chạy dò";
-"sandbox.diag.reset_access_cache" = "Đặt lại bộ nhớ truy cập";
-"sandbox.diag.reset_running" = "Đang đặt lại…";
-"sandbox.diag.reset_ok" = "Đã đặt lại bộ nhớ truy cập. Đã chạy lại dò.";
-"sandbox.diag.reset_failed" = "Đặt lại bộ nhớ truy cập thất bại. Hãy thử lại hoặc cài lại ứng dụng.";
-"sandbox.diag.reset_footer" = "Khôi phục Library/Caches của App Group về thư mục thường. Không xóa dữ liệu; mọi thứ cản đường chỉ được đổi tên sang một bên. Dùng khi mọi vùng chứa đều hiện là chưa xác định.";
 "sandbox.diag.section_grants" = "Bản ghi cấp quyền gần đây (mới → cũ)";
 "sandbox.diag.grants_footer" = "Giữ tối đa 50 kết quả cấp quyền gần nhất để xử lý lỗi ghi trên iOS 27.";
 "sandbox.diag.copy" = "Sao chép chẩn đoán đầy đủ";
@@ -760,8 +772,6 @@
 "home.card.wallpapers_detail" = "Cài hình nền .tendies";
 "home.card.backups" = "Trung tâm sao lưu";
 "home.card.backups_detail" = "Bản gốc, sao lưu tự động và khôi phục";
-"home.card.wifishare" = "Truyền qua Wi-Fi";
-"home.card.wifishare_detail" = "Gửi nhận tệp qua mạng cục bộ bằng trình duyệt";
 "home.card.logs" = "Nhật ký chạy";
 "home.card.logs_detail" = "Xem thao tác và lỗi";
 "home.card.settings" = "Cài đặt";
@@ -913,14 +923,6 @@
 "fileinfo.owner" = "Chủ sở hữu";
 "fileinfo.group" = "Nhóm";
 "fileinfo.symlink" = "Liên kết tượng trưng";
-"fileinfo.section.permissions" = "Quyền";
-"fileinfo.permissions.footer" = "Thay đổi quyền có thể khiến ứng dụng không đọc hoặc ghi được vùng chứa của chính nó. Hãy chắc bạn biết tệp này dùng để làm gì.";
-"fileinfo.permissions.read_only" = "Hiện chỉ đọc: không có quyền ghi nào được bật.";
-"fileinfo.permissions.symlink" = "Đây là một liên kết tượng trưng. Quyền áp dụng cho tệp đích nên không thể sửa tại đây.";
-"fileinfo.permissions.presets" = "Quyền đặt trước";
-"fileinfo.permissions.applied_title" = "Đã cập nhật quyền";
-"fileinfo.permissions.applied_message" = "Chế độ hiện tại: %@. Một bản sao lưu đã được ghi lại trước đó nên có thể khôi phục từ danh sách sao lưu.";
-"fileinfo.permissions.failed_title" = "Đổi quyền thất bại";
 "fileinfo.type.folder" = "Thư mục";
 "fileinfo.type.file" = "Tệp";
 "cleaner.crash.section" = "Nhật ký sự cố";
@@ -958,7 +960,6 @@
 "gestalt.category.display" = "Hiển thị";
 "gestalt.category.device" = "Thiết bị";
 "gestalt.category.ipad" = "iPad";
-"gestalt.category.media" = "Hình ảnh & Sức khỏe";
 "gestalt.category.intelligence" = "Trí tuệ";
 "gestalt.category.advanced" = "Nâng cao";
 "gestalt.presets.title" = "Thư viện preset Gestalt";
@@ -995,28 +996,10 @@
 "gestalt.region.title" = "Vùng & Siri AI";
 "gestalt.region.snapshot_header" = "Vùng hiện tại";
 "gestalt.region.snapshot_footer" = "Chỉ hiển thị khóa có trên máy. Ghi chỉ đụng khóa sẵn có, tránh xây lại bộ nhớ đệm trên iOS 27.";
-"gestalt.region.switch_header" = "Chuyển vùng";
-"gestalt.region.switch_footer" = "Chỉ đổi mã quốc gia và vùng bán hàng, không đổi số hiệu quản lý — giá trị đó là hồ sơ phê duyệt kiểu mẫu của thiết bị và thuộc luồng Siri AI. Cần khởi động lại.";
-"gestalt.region.switch_current" = "Vùng hiện tại";
-"gestalt.region.switch_apply" = "Áp dụng vùng";
-"gestalt.region.switch_confirm_title" = "Chuyển vùng";
-"gestalt.region.switch_other" = "Khác";
-"gestalt.region.switch_unknown" = "Không có trong danh sách";
-"risk.gestalt.regionSwitch.consequence" = "Ghi lại mã quốc gia và vùng bán hàng trong bộ nhớ đệm MobileGestalt thành vùng đã chọn, đồng thời tạo bản sao lưu trước khi ghi. Cần khởi động lại để áp dụng.";
-"risk.gestalt.regionSwitch.worst_case" = "Sau khi khởi động lại, nội dung cửa hàng, ngôn ngữ Siri và một số tính năng hệ thống phụ thuộc vùng có thể thay đổi. Số hiệu quản lý được giữ nguyên nên không ảnh hưởng hồ sơ phê duyệt kiểu mẫu.";
-"risk.gestalt.regionSwitch.recovery" = "Khôi phục bản sao lưu trước khi ghi từ danh sách sao lưu rồi khởi động lại để trở về vùng ban đầu.";
 "gestalt.region.machine" = "Máy";
 "gestalt.region.country" = "Mã quốc gia";
 "gestalt.region.sales" = "Vùng bán hàng";
 "gestalt.region.regulatory" = "Kiểu máy quản lý";
-"gestalt.region.sysconfig" = "RegionInfoFromSysconfig (hệ thống đọc)";
-"gestalt.region.noncache" = "RegionInfo (khóa không cache)";
-"gestalt.region.value_missing" = "(thiếu)";
-"gestalt.region.mode" = "Chế độ sửa";
-"gestalt.region.mode.full_us" = "Bản Mỹ đầy đủ (LL + LL/A)";
-"gestalt.region.mode.code_only" = "Chỉ mã vùng LL (giữ hậu tố bán hàng)";
-"gestalt.region.mode.other" = "Chưa chuyển";
-"gestalt.region.stale_warning" = "Khóa không cache vẫn giữ %@; hệ thống đọc %@. Hãy tin dòng vùng bán hàng.";
 "gestalt.region.native_header" = "Siri AI gốc (máy đã xác minh)";
 "gestalt.region.native_model" = "Nhận diện là %@";
 "gestalt.region.native_detail" = "Chỉ đổi quốc gia/vùng bán hàng/kiểu máy quản lý + cờ AI. Không giả phần cứng, Face ID không bị ảnh hưởng. Cần khởi động lại.";
@@ -1038,9 +1021,6 @@
 "risk.gestalt.category.device.consequence" = "Thường cần khởi động lại. Chỉ ảnh hưởng hiển thị Cài đặt và cờ khả năng, không đụng phần cứng.";
 "risk.gestalt.category.device.worst_case" = "Mục cài đặt có thể không xuất hiện hoặc hành vi lạ; phần cứng không hỗ trợ sẽ không có thật.";
 "risk.gestalt.category.device.recovery" = "Tắt hoặc khôi phục bản chụp trước khi ghi, rồi khởi động lại.";
-"risk.gestalt.category.media.consequence" = "Chỉ ghi slot boolean CacheData; CacheUUID, độ dài và bit hợp lệ được kiểm tra trước khi ghi.";
-"risk.gestalt.category.media.worst_case" = "Slot phần cứng không hỗ trợ sẽ không có tác dụng thật; hiếm khi cần khôi phục bản sao lưu và khởi động lại.";
-"risk.gestalt.category.media.recovery" = "Tắt trên trang preset hoặc khôi phục bản chụp trước khi ghi trong trung tâm sao lưu, rồi khởi động lại.";
 "risk.gestalt.category.ipad.consequence" = "Cần khởi động lại. Preset iPad chủ yếu ảnh hưởng hiển thị Cài đặt.";
 "risk.gestalt.category.ipad.worst_case" = "Bố cục Stage Manager có thể lệch với máy mục tiêu; tương thích ứng dụng iPad trên iPhone có thể hiển thị lạ.";
 "risk.gestalt.category.ipad.recovery" = "Tắt hoặc khôi phục bản chụp trước khi ghi.";
@@ -1092,26 +1072,6 @@
 "gestalt.preset.collisionSOS.detail" = "Hiện phát hiện va chạm trong cài đặt SOS khẩn cấp. Vẫn cần phần cứng.";
 "gestalt.preset.spatialFaceTimeAudio.title" = "Âm thanh không gian FaceTime";
 "gestalt.preset.spatialFaceTimeAudio.detail" = "Bật phát âm thanh không gian cho FaceTime.";
-"gestalt.preset.audioMix.title" = "Trộn âm thanh Ảnh & Camera (Audio Mix)";
-"gestalt.preset.audioMix.detail" = "Cho phép Ảnh và Camera trộn nhiều track âm thanh vào một clip; không có tác dụng nếu phần cứng không hỗ trợ.";
-"gestalt.preset.spatialAudioRec.title" = "Ghi âm thanh không gian";
-"gestalt.preset.spatialAudioRec.detail" = "Camera hoặc Ghi âm ghi âm thanh không gian; cần dàn micro.";
-"gestalt.preset.responsiveShutter.title" = "Chụp ngay khi nhấn cửa trập (Responsive Shutter)";
-"gestalt.preset.responsiveShutter.detail" = "Lưu khung hình ngay khi nhấn cửa trập, giảm nhòe chuyển động.";
-"gestalt.preset.hypertensionNotif.title" = "Xu hướng huyết áp trong Sức khỏe";
-"gestalt.preset.hypertensionNotif.detail" = "Bật phân tích xu hướng huyết áp cao, đánh giá rủi ro và hướng dẫn đo trong Sức khỏe.";
-"gestalt.preset.shutterMute.title" = "Tắt thật tiếng màn trập (Nhật/Hàn)";
-"gestalt.preset.shutterMute.detail" = "Kết hợp ba slot âm thanh màn trập; chỉ có tác dụng ở khu vực và phần cứng hỗ trợ.";
-"gestalt.preset.concurrentMics.title" = "Hai micro đồng thời (công suất cao/thấp)";
-"gestalt.preset.concurrentMics.detail" = "Ghi âm bằng cả micro công suất cao và thấp; cần phần cứng tương ứng.";
-"gestalt.preset.photoRelight.title" = "Tái chiếu sáng cục bộ & ánh xạ tông màu";
-"gestalt.preset.photoRelight.detail" = "Bật tái chiếu sáng cục bộ, ánh xạ tông màu và HDR xử lý trễ.";
-"gestalt.preset.videoOverCapture.title" = "Siêu khung hình & video P3 stereo";
-"gestalt.preset.videoOverCapture.detail" = "Bật siêu khung hình, ghi stereo và video P3.";
-"gestalt.preset.cameraControlPanel.title" = "Bảng điều khiển camera đầy đủ";
-"gestalt.preset.cameraControlPanel.detail" = "Bật zoom cảm ứng, nấc vật lý và phản hồi xúc giác camera.";
-"gestalt.preset.legacyBattery.title" = "Chu kỳ pin & ngày sản xuất máy cũ";
-"gestalt.preset.legacyBattery.detail" = "Hiển thị số chu kỳ pin và ngày sản xuất trên máy cũ.";
 "gestalt.preset.pencil.title" = "Apple Pencil";
 "gestalt.preset.pencil.detail" = "Hiện cài đặt Apple Pencil. Vẫn cần phần cứng.";
 "gestalt.preset.stageManager.title" = "Stage Manager";
@@ -1140,18 +1100,6 @@
 "gestalt.preset.internalSettings.detail" = "Hiện gói cài đặt nội bộ của Apple. Một số dịch vụ có thể thay đổi hành vi.";
 "gestalt.preset.srd.title" = "Cờ Security Research Device";
 "gestalt.preset.srd.detail" = "Đổi cờ khả năng SRD. Không biến máy thành Apple SRD.";
-"gestalt.preset.carPlayUltra.title" = "CarPlay Ultra";
-"gestalt.preset.carPlayUltra.detail" = "Khai báo CarPlay đa màn hình thế hệ mới; cần đầu xe và phần cứng hỗ trợ.";
-"gestalt.preset.touch120.title" = "Truyền sự kiện cảm ứng 120 Hz";
-"gestalt.preset.touch120.detail" = "Bật pipeline truyền sự kiện cảm ứng 120 Hz.";
-"gestalt.preset.hearingAid.title" = "EQ thính lực AirPods & trợ thính tiết kiệm pin";
-"gestalt.preset.hearingAid.detail" = "Bật cân bằng thính lực, trợ thính năng lượng thấp và giảm công suất.";
-"gestalt.preset.breathingApnea.title" = "Phát hiện xu hướng ngưng thở khi ngủ";
-"gestalt.preset.breathingApnea.detail" = "Bật đo rối loạn hô hấp và thông báo.";
-"gestalt.preset.usBloodOxygen.title" = "Bỏ giới hạn oxy máu bản Mỹ";
-"gestalt.preset.usBloodOxygen.detail" = "Khai báo khả năng oxy máu hợp chuẩn Mỹ; không đổi cảm biến.";
-"gestalt.preset.workoutUltra.title" = "Thể thao ngoài trời & thời gian nắng";
-"gestalt.preset.workoutUltra.detail" = "Bật chế độ thể thao cực hạn và thống kê thời gian ngoài nắng.";
 "supervised.title" = "Chế độ giám sát";
 "supervised.header" = "Supervised Mode";
 "supervised.state" = "Trạng thái hiện tại";
@@ -1165,15 +1113,6 @@
 "risk.supervised.consequence" = "Đổi khóa IsSupervised trong CloudConfigurationDetails.plist của vùng chứa ConfigurationProfiles. Ghi ngay lập tức kèm sao lưu tự động. Có hiệu lực sau khi thoát Cài đặt.";
 "risk.supervised.worst_case" = "Máy quản lý bằng MDM sẽ mất quan hệ quản lý; lần khởi động lại tới có thể hiện màn hình cài đặt.";
 "risk.supervised.recovery" = "Gạt lại công tắc, hoặc khôi phục bản chụp trước khi ghi trong trung tâm sao lưu.";
-"supervised.audit.header" = "Kiểm tra giám sát giả";
-"supervised.audit.clean" = "Không phát hiện hồ sơ giám sát giả";
-"supervised.audit.genuine" = "Phát hiện ghi danh MDM thật (tổ chức: %@)";
-"supervised.audit.fake" = "Phát hiện tàn dư giám sát giả (tổ chức: %@) — nên xóa";
-"supervised.audit.clear" = "Xóa tàn dư giám sát giả";
-"supervised.audit.clear_confirm" = "Tệp sẽ được sao lưu trước, sau đó CloudConfigurationDetails.plist chỉ chứa IsSupervised/OrganizationName sẽ bị xóa. MDM thật không bị ảnh hưởng.";
-"supervised.audit.cleared" = "Đã xóa tàn dư giám sát giả.";
-"supervised.audit.footer" = "Chỉ xóa tệp chỉ chứa IsSupervised / OrganizationName và không có khóa MDM hay chuỗi chứng chỉ. MDM thật không bao giờ bị động tới.";
-"supervised.error.not_residue" = "Tệp hiện tại không phải tàn dư giám sát giả; không thay đổi gì.";
 "supervised.error.unavailable" = "CloudConfigurationDetails.plist không tồn tại.";
 "supervised.error.unreadable" = "Không thể đọc cấu hình mô tả.";
 "supervised.error.invalid" = "Cấu hình mô tả không phải plist hợp lệ.";
@@ -1218,6 +1157,7 @@
 "settings.experimental" = "Tính năng thử nghiệm";
 "settings.experimental_header" = "Tính năng thử nghiệm";
 "settings.experimental_footer" = "Hiện các luồng thử nghiệm rủi ro cao (ví dụ chế độ Siri AI thử nghiệm). Các luồng này chưa được xác minh đầy đủ trên máy thật; trường hợp xấu nhất có thể cần khôi phục máy.";
+"gestalt.presets.factory_protected" = "Năng lực này tắt sẵn tại nhà máy (Erosion-CN v0.8.5, đã xác minh trên máy): bật ép sẽ làm gãy kiểm tra pipeline mô hình tạo sinh và tính năng Clean Up chất lượng cao của Ảnh báo lỗi. Đã khóa.";
 "gestalt.region.error.factory_baseline" = "Cờ khả năng AI tắt sẵn tại nhà máy; việc ghi bị từ chối theo quy tắc baseline nhà máy (Clean Up chất lượng cao của Ảnh sẽ lỗi).";
 "cleaner.progress" = "Đang dọn %lld/%lld · đã giải phóng %@ · đang: %@";
 "preview.too_large" = "Tệp vượt 200 MB nên không tải trước để tránh chờ lâu. Hãy mở trực tiếp.";
@@ -1272,7 +1212,6 @@
 "filereplace.error.target_missing" = "Tệp đích không tồn tại.";
 "filereplace.error.source_missing" = "Tệp sao lưu bị mất hoặc đã xóa.";
 "filereplace.error.backup_failed" = "Sao lưu thất bại (đích có thể là thư mục hoặc vùng chứa không ghi được).";
-"filereplace.error.sidecar_not_regular" = "Tệp phụ -wal/-shm của cơ sở dữ liệu không phải tệp thường; khôi phục đã bị hủy để bảo vệ dữ liệu.";
 "filereplace.blocked.file_name" = "Tệp hệ thống lõi (bộ nhớ đệm Gestalt, cấu hình mô tả, keychain…) có trang riêng; cấm thay thô.";
 "filereplace.blocked.prefix" = "Thư mục bảo mật hệ thống (/System, /usr, keychains…) cấm thay thô.";
 "backend.notice.filereplace" = "Thay thế trong vùng chứa ứng dụng dùng được trên cả iOS 26 và 27 (lỗ hổng được chọn theo phiên bản). Chỉ đích trong vùng chứa nhóm hệ thống là không ghi được trên iOS 26.0–26.6.1.";
@@ -1301,7 +1240,6 @@
 "gestalt.cards.advanced_title" = "Công cụ nâng cao";
 "gestalt.cards.footer.display" = "Cần khởi động lại (hoặc Respring); chỉ ghi khóa sẵn có.";
 "gestalt.cards.footer.device" = "Ảnh hưởng hiển thị Cài đặt và cờ khả năng, không đụng phần cứng.";
-"gestalt.cards.footer.media" = "Các bit này nằm trong slot CacheData; mỗi lần đọc/ghi đều kiểm tra bố cục dylib đang chạy. Hãy khởi động lại sau khi đổi.";
 "gestalt.cards.footer.ipad" = "Preset iPad chủ yếu ảnh hưởng hiển thị Cài đặt; bố cục thay đổi theo máy.";
 "gestalt.cards.footer.intelligence" = "Apple Intelligence còn phụ thuộc phần cứng, vùng và máy chủ Apple.";
 "gestalt.cards.footer.advanced" = "Cờ nội bộ toàn hệ thống đụng nhiều dịch vụ; chắc chắn bạn hiểu rủi ro.";
@@ -1309,13 +1247,10 @@
 "gestalt.cards.checkup_item" = "%lld.";
 "gestalt.cards.checkup_region" = "Định danh vùng bán (LL / LL/A)";
 "gestalt.cards.checkup_regulatory" = "Kiểu máy quản lý Mỹ";
-"gestalt.cards.checkup_regulatory_keep" = "Kiểu máy quản lý (giữ nguyên %@)";
 "gestalt.cards.checkup_gate" = "Kiểm tra cổng máy TQ & khóa tương hỗ";
 "gestalt.cards.checkup_admission" = "Điều kiện AI trên máy & năng lực con";
 "gestalt.cards.checkup_cfg_live" = "Cấu hình: %@ · Trên máy: %@";
 "gestalt.cards.checkup_gate_ok" = "green-tea=false · không xung đột debug nội bộ, SiriHub hay Clean-Up";
-"gestalt.cards.checkup_gate_cn" = "green-tea=true · cổng Trung Quốc vẫn bật";
-"gestalt.cards.checkup_gate_unknown" = "Không đọc được CacheData (bố cục cục bộ không qua kiểm tra)";
 "gestalt.cards.checkup_admission_native" = "Máy này (%@) hỗ trợ sẵn Apple Intelligence (Clean Up ảnh, ghi âm & chuyển mã cuộc gọi)";
 "gestalt.cards.checkup_admission_unverified" = "Phần cứng này không có trong bảng máy AI gốc; cần giả lập thử nghiệm";
 "gestalt.cards.badge_effective" = "Đã hiệu lực trên máy";
@@ -1511,15 +1446,6 @@
 "systemsettings.cleared" = "Đã xóa.";
 "systemsettings.current_empty" = "Chưa đặt (nguyên bản)";
 "systemsettings.edit_footer" = "Ghi khóa LockScreenFootnote của hồ sơ cấu hình hệ thống — một dòng, tối đa 256 ký tự; thấy sau khi khóa máy hoặc Respring. Không qua MobileGestalt.";
-"systemsettings.asset_current_empty" = "Chưa đặt (trạng thái xuất xưởng)";
-"systemsettings.asset_section.current" = "Thẻ tài sản hiện tại";
-"systemsettings.asset_section.edit" = "Sửa thẻ tài sản";
-"systemsettings.asset_field_placeholder" = "Ví dụ: Nếu nhặt được, liên hệ…";
-"systemsettings.asset_apply" = "Ghi thẻ";
-"systemsettings.asset_clear" = "Xóa thẻ";
-"systemsettings.asset_applied" = "Đã ghi AssetTagInformation.";
-"systemsettings.asset_cleared" = "Đã xóa AssetTagInformation.";
-"systemsettings.asset_edit_footer" = "Ghi khóa AssetTagInformation của hồ sơ cấu hình hệ thống để hiển thị thông tin chống mất trên màn hình khóa/giới thiệu; tối đa 256 ký tự.";
 "systemsettings.error.invalid" = "Tuần tự hóa thất bại, đã hủy ghi.";
 "systemsettings.error.title" = "Thao tác chữ màn hình khóa thất bại";
 "systemsettings.error.too_long" = "Chữ vượt giới hạn 256 ký tự.";
@@ -1544,14 +1470,14 @@
 "update.failure.offline" = "Kiểm tra thất bại: không kết nối được GitHub (ngoại tuyến hoặc bị chặn — cần proxy/mạng khác).";
 "update.failure.other" = "Kiểm tra thất bại:";
 
-// Field-import merge (3.2.5 rebuild)
+// GestaltX v1.1.1 #138 field-import merge (3.2.5 rebuild)
 "gestalt.error.layout_mismatch" = "Định danh bộ nhớ đệm trong plist nhập không khớp thiết bị này; đã từ chối ghi.";
 "gestalt.field.import_summary" = "Nhập xong: ghi đè %d, bỏ qua %d khóa không xác định, giữ %d mục.";
 
-// Config import errors (3.2.5 rebuild)
+// GestaltX v1.1.1 #133 config import errors (3.2.5 rebuild)
 "config.import_error.title" = "Nhập gói cấu hình thất bại";
 
-// Notification sound replacement (3.2.5 rebuild)
+// Notification sound replacement (3.2.5 rebuild, GestaltX App Audio Library parity)
 "home.card.sounds" = "Thay âm báo";
 "home.card.sounds_detail" = "Thay âm báo của ứng dụng bằng âm thanh tùy chọn";
 "notification.sound.title" = "Thay âm báo";
@@ -1577,38 +1503,3 @@
 "notification.sound.error.container" = "Không thể xác định container của ứng dụng. Hãy đảm bảo ứng dụng đã cài và container truy cập được.";
 "notification.sound.error.target" = "Đường dẫn mục tiêu không hợp lệ.";
 "notification.sound.error.source" = "Không thể đọc tệp âm thanh đã chọn.";
-"onboarding.support_ok" = "Thiết bị này được hỗ trợ";
-"onboarding.support_no" = "Thiết bị này không được hỗ trợ";
-"onboarding.app_group_note" = "Cần quyền App Group";
-"wifishare.title" = "Truyền qua Wi-Fi";
-"wifishare.enable" = "Bật máy chủ";
-"wifishare.stopped" = "Máy chủ đã dừng. Khi bật, trình duyệt trong cùng mạng Wi-Fi có thể truy cập tệp trên thiết bị này.";
-"wifishare.starting" = "Đang khởi động…";
-"wifishare.address" = "Địa chỉ";
-"wifishare.connections" = "Kết nối";
-"wifishare.footer" = "Chỉ truy cập trong mạng cục bộ, không qua bất kỳ máy chủ nào. Dùng được từ trình duyệt trên máy tính hoặc điện thoại khác.";
-"wifishare.credentials" = "Thông tin đăng nhập";
-"wifishare.user" = "Tên người dùng";
-"wifishare.pin" = "Mã PIN";
-"wifishare.folder" = "Thư mục chia sẻ";
-"wifishare.pin_footer" = "Mã PIN được tạo lại mỗi lần khởi động và mất hiệu lực khi dừng máy chủ. Nhập cả hai giá trị vào hộp đăng nhập của trình duyệt.";
-"wifishare.requests" = "Yêu cầu gần đây";
-"wifishare.usage" = "Dòng lệnh";
-"wifishare.usage_curl" = "Tải lên: curl -u 3106:PIN -T ./file \"http://ĐỊA_CHỈ:CỔNG/api/upload?path=file\"";
-"wifishare.usage_footer" = "Tải một tệp bằng /api/download?path=tên, hoặc cả thư mục bằng /api/zip?path=thư_mục. Tệp tải lên trùng tên sẽ được đổi tên chứ không ghi đè.";
-"wifishare.entry" = "Truyền qua Wi-Fi";
-"wifishare.entry_footer" = "Truyền tệp trong cùng mạng Wi-Fi, không cần cáp hay ổ đĩa đám mây.";
-"unlock.title" = "Mở khóa";
-"unlock.backend" = "Phần phụ trợ";
-"unlock.os" = "Hệ thống";
-"unlock.footer" = "Mở khóa sẽ chạy chuỗi khai thác nhân để có quyền đọc ghi vùng chứa. Phải lặp lại sau mỗi lần khởi động vì trạng thái nhân không được giữ lại.";
-"unlock.status" = "Trạng thái";
-"unlock.result" = "Kết quả";
-"unlock.duration" = "Thời gian";
-"unlock.run" = "Mở khóa ngay";
-"unlock.running" = "Đang mở khóa…";
-"unlock.warning" = "Chuỗi khai thác mất 10–30 giây và thiết bị có thể đứng hình trong chốc lát; nếu thua cuộc đua, thiết bị có thể tự khởi động lại. Có thể thử lại sau khi thất bại, nhưng hãy để lần khởi động lại hoàn tất trước.";
-"unlock.log" = "Nhật ký trực tiếp";
-"unlock.log_empty" = "Chưa có nhật ký. Nhấn nút phía trên, từng bước của chuỗi sẽ hiện ở đây.";
-"unlock.banner_title" = "Cần mở khóa";
-"unlock.banner_detail" = "Nhấn để chạy chuỗi khai thác nhân và có quyền truy cập vùng chứa";

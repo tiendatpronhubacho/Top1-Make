@@ -16,7 +16,7 @@
 
 "update.title" = "发现新版本";
 "update.message" = "GitHub 上已发布 3106 %@。";
-"update.agree" = "更新";
+"update.agree" = "同意";
 "update.dismiss" = "不再显示";
 "patch.error.wrong_password" = "密码错误。";
 
@@ -27,10 +27,24 @@
 "attribution.open" = "打开链接";
 "attribution.share" = "分享链接";
 
+"onboarding.step" = "第 %@ 步，共 %@ 步";
+"onboarding.language_title" = "选择语言";
+"onboarding.language_subtitle" = "之后可在设置中更改。";
+"onboarding.language_hint" = "已选择：%@";
+"onboarding.welcome_title" = "欢迎使用 3106";
+"onboarding.welcome_message" = "3106";
+"onboarding.welcome_badge" = "官方 3106 标识";
 "onboarding.versions_title" = "支持的 iOS 版本";
 "onboarding.versions_subtitle" = "3106 已在下列范围内验证。不支持的版本会被阻止。";
 "onboarding.versions_footer" = "本设备：iOS %@（%@）";
+"onboarding.beta" = "Beta";
+"onboarding.developer_beta" = "开发者 Beta %@";
+"onboarding.public_beta" = "公开 Beta %@";
+"onboarding.install_title" = "证书要求";
 "onboarding.install_message" = "3106 在 iOS 26.7+ 与 27.x 上使用 worse_query，需要 App Group entitlement：用 AltStore、SideStore 或 Sideloadly 签名（免费 Apple ID 即可），或使用带 App Groups 的显式 App ID。";
+"onboarding.install_ok" = "支持企业证书，包括 eSign 和类似的企业安装方式。";
+"onboarding.install_bad" = "不支持 SideStore、AltStore、3uTools 或 LiveContainer。";
+"onboarding.install_jailbreak" = "在 iOS 17 至 iOS 18.7.1 上，如果设备已越狱，3106 将无法运行。";
 "onboarding.install_footer" = "继续前，请在未越狱的设备上使用受支持的证书。";
 
 "dashboard.exploit_access" = "漏洞利用权限";
@@ -46,11 +60,14 @@
 "dashboard.device_name" = "设备名称";
 "dashboard.hardware_model" = "硬件型号";
 "dashboard.access_footer" = "只有成功以读写模式打开系统文件后，才会报告权限获取成功。";
+"dashboard.unsupported_footer" = "iOS %@（%@）不在已验证范围内。支持：iOS 17.0–17.7.x、iOS 18.0–18.7.1、iOS 26.0–26.6.1、iOS 27.0 开发者 Beta 1–4 和公开 Beta 1–2。";
 "dashboard.app_browser" = "应用数据浏览器";
 "dashboard.browser" = "文件浏览器";
 "dashboard.open_browser" = "打开文件浏览器";
 "dashboard.browser_footer" = "浏览并读取此设备上所有应用和系统容器中的数据。";
 "dashboard.device_actions_warning" = "重新启动设备前，请先保存尚未应用的更改。";
+"dashboard.unsupported_device" = "不支持的设备";
+"dashboard.unsupported_message" = "暂不支持 iOS %@。\n\n当前支持：\n• iOS 17.0–17.7.x\n• iOS 18.0–18.7.1\n• iOS 26.0–26.6.1\n• iOS 27.0 开发者 Beta 1–4\n• iOS 27.0 公开 Beta 1–2";
 "dashboard.installation" = "应用安装";
 "dashboard.kernel_status" = "内核状态";
 "dashboard.kernel_running" = "正在激活…";
@@ -233,11 +250,7 @@
 "status.not_attempted" = "尚未尝试";
 "status.ok_via" = "通过 %@ 成功";
 "status.failed_via" = "%@ 失败（%lld）";
-"status.unsupported_a10_ios17" = "不支持：A10 芯片（iPhone 7、iPad 6/7）在 iOS 17 上运行内核链会导致设备卡死重启，因此本机不启用。系统版本本身是受支持的 —— 不是需要升级系统，而是在这台设备上无法获得容器访问。iOS 18 及以上的同一台设备不受此限制。";
-"{{SECRET_hisgwbph}}" = "不支持：检测到越狱环境。越狱设备上沙箱可能已被插件改动，内核链的成功或失败都无法归因于 3106，因此不执行。请使用未越狱的设备。";
 "status.unsupported_reason" = "不支持：%@";
-"status.unsupported_ios18_patched" = "不支持：iOS 18.7.2 起 Apple 已修补 3106 在 iOS 17/18 上依赖的内核漏洞（CVE-2025-43520），18.7.2 及之后版本无法获得容器访问。可选：设备留在 iOS 18.7.1 或更低、改用 iOS 26 以上设备（无需内核漏洞），或在越狱环境使用支持根文件系统的文件管理器。";
-"status.unsupported_ios27_build" = "不支持：iOS 27.3 的沙箱逃逸已被 Apple 修补，仅已验证的 build 可用（%@）。请勿升级到更新的 27.3 build。";
 "method.simulator_preview" = "模拟器预览";
 
 "settings.title" = "设置";
@@ -254,6 +267,10 @@
 "settings.tab_bar_footer" = "已选择 %lld/%lld 个槽位，首页固定显示；槽位满时请先关闭一个再开启其他项。";
 "settings.tab_bar_fixed" = "固定显示";
 "settings.github" = "GitHub";
+"settings.beta_build" = "Beta %lld · %@";
+"settings.developer_beta_build" = "开发者 Beta %lld · %@";
+"settings.developer_public_beta_build" = "开发者 Beta %lld / 公开 Beta %lld · %@";
+"settings.supported_range_summary" = "已验证：iOS 17.0–17.7.x、iOS 18.0–18.7.1、iOS 26.0–26.6.1、iOS 27.0 开发者 Beta 1–4 和公开 Beta 1–2。";
 
 "kernel.section_title" = "内核漏洞利用";
 "kernel.run_exploit" = "运行内核漏洞利用";
@@ -263,7 +280,7 @@
 "kernel.footer_warning" = "仅内存运行（重启后不保留）。失败时请重新打开应用后再试。";
 "kernel.auto_run" = "启动时自动运行";
 "kernel.failed_requires_relaunch" = "请重新打开应用后再试。";
-"settings.supported_versions_footer" = "iOS 26.0–26.6.1 使用 bad_query；26.7–26.7.2 与 27.0–27.2 使用 worse_query。iOS 27.3 仅支持 beta 1（build 24C5037i），按 build 号校验；beta 2 起 Apple 已修补。worse_query 需要 App Group。";
+"settings.supported_versions_footer" = "iOS 26.0–26.6.1 使用 bad_query；26.7–26.7.2 与 27.0–27.2 使用 worse_query。iOS 27.3 beta 为实验性支持。worse_query 需要 App Group。";
 "settings.sandbox_token" = "沙盒令牌";
 "settings.generate_token" = "生成令牌";
 "settings.token_footer" = "成功获得漏洞利用权限后可用。";
@@ -429,11 +446,6 @@
 "sandbox.diag.probe_not_run" = "未运行";
 "sandbox.diag.probe_running" = "探测中…";
 "sandbox.diag.probe_run" = "运行探测";
-"sandbox.diag.reset_access_cache" = "重置访问缓存";
-"sandbox.diag.reset_running" = "正在重置…";
-"sandbox.diag.reset_ok" = "访问缓存已重置，已重新探测。";
-"sandbox.diag.reset_failed" = "访问缓存重置失败，请重试或重新安装应用。";
-"sandbox.diag.reset_footer" = "把 App Group 的 Library/Caches 恢复到普通文件夹。不会删除数据，挡路的内容只会被改名挪开。全部容器显示“未识别”时使用。";
 "sandbox.diag.section_grants" = "最近授权记录（新→旧）";
 "sandbox.diag.grants_footer" = "保留最近 50 条授权结果，用于排查 iOS 27 写入失败。";
 "sandbox.diag.copy" = "复制完整诊断";
@@ -760,8 +772,6 @@
 "home.card.wallpapers_detail" = "安装 .tendies 壁纸";
 "home.card.backups" = "备份中心";
 "home.card.backups_detail" = "原始数据、自动备份与恢复";
-"home.card.wifishare" = "Wi-Fi 互传";
-"home.card.wifishare_detail" = "同一 Wi-Fi 下用浏览器收发文件，无需数据线";
 "home.card.logs" = "运行日志";
 "home.card.logs_detail" = "查看操作与错误";
 "home.card.settings" = "设置";
@@ -913,14 +923,6 @@
 "fileinfo.owner" = "所有者";
 "fileinfo.group" = "用户组";
 "fileinfo.symlink" = "符号链接";
-"fileinfo.section.permissions" = "权限";
-"fileinfo.permissions.footer" = "修改权限会让应用无法读写自己的容器，先确认你知道这个文件的作用。";
-"fileinfo.permissions.read_only" = "当前为只读：任何写权限都没有开启。";
-"fileinfo.permissions.symlink" = "这是一个符号链接，权限作用于它指向的目标，因此这里不提供修改。";
-"fileinfo.permissions.presets" = "预设权限";
-"fileinfo.permissions.applied_title" = "权限已修改";
-"fileinfo.permissions.applied_message" = "当前权限：%@。修改前已自动记录一条备份版本，可在备份列表里回滚。";
-"fileinfo.permissions.failed_title" = "权限修改失败";
 "fileinfo.type.folder" = "文件夹";
 "fileinfo.type.file" = "文件";
 "cleaner.crash.section" = "崩溃日志";
@@ -958,7 +960,6 @@
 "gestalt.category.display" = "显示";
 "gestalt.category.device" = "设备";
 "gestalt.category.ipad" = "iPad";
-"gestalt.category.media" = "影像与健康";
 "gestalt.category.intelligence" = "智能功能";
 "gestalt.category.advanced" = "高级";
 "gestalt.presets.title" = "Gestalt 预设库";
@@ -1000,26 +1001,6 @@
 "gestalt.preset.collisionSOS.detail" = "在紧急 SOS 设置中显示车祸检测。仍需硬件支持。";
 "gestalt.preset.spatialFaceTimeAudio.title" = "空间 FaceTime 音频";
 "gestalt.preset.spatialFaceTimeAudio.detail" = "为 FaceTime 启用空间音频播放。";
-"gestalt.preset.audioMix.title" = "相册与相机混音 (Audio Mix)";
-"gestalt.preset.audioMix.detail" = "允许相册与相机把多路音频混入同一成片；本机硬件不支持时不会真实生效。";
-"gestalt.preset.spatialAudioRec.title" = "空间音频录制";
-"gestalt.preset.spatialAudioRec.detail" = "相机或语音备忘录以空间音频录制；依赖多麦克风阵列。";
-"gestalt.preset.responsiveShutter.title" = "按下快门瞬间抓拍 (Responsive Shutter)";
-"gestalt.preset.responsiveShutter.detail" = "在按下快门的瞬间保存画面，减少运动模糊。";
-"gestalt.preset.hypertensionNotif.title" = "健康高血压趋势评估";
-"gestalt.preset.hypertensionNotif.detail" = "开启健康 App 的血压偏高趋势分析、风险评估与记录向导。";
-"gestalt.preset.shutterMute.title" = "真·相机快门静音（日/韩版）";
-"gestalt.preset.shutterMute.detail" = "组合开启三个快门音槽位；仅在支持的地区与硬件上生效。";
-"gestalt.preset.concurrentMics.title" = "高低功耗双麦并发拾音";
-"gestalt.preset.concurrentMics.detail" = "录音时高低功耗麦克风同时工作；需要对应硬件。";
-"gestalt.preset.photoRelight.title" = "相册局部光影重绘与色调映射";
-"gestalt.preset.photoRelight.detail" = "开启局部光影重绘、色调映射与 HDR 延迟处理槽位。";
-"gestalt.preset.videoOverCapture.title" = "超取景框捕获与 P3 立体声视频";
-"gestalt.preset.videoOverCapture.detail" = "开启超取景框、立体声录制与 P3 色域视频槽位。";
-"gestalt.preset.cameraControlPanel.title" = "相机控制完整面板";
-"gestalt.preset.cameraControlPanel.detail" = "开启电容滑动变焦、物理档位与相机触觉反馈槽位。";
-"gestalt.preset.legacyBattery.title" = "旧机型电池循环与生产日期";
-"gestalt.preset.legacyBattery.detail" = "让旧机型显示电池循环次数与生产日期。";
 "gestalt.preset.pencil.title" = "Apple Pencil";
 "gestalt.preset.pencil.detail" = "显示 Apple Pencil 设置。仍需硬件支持。";
 "gestalt.preset.stageManager.title" = "台前调度";
@@ -1048,27 +1029,12 @@
 "gestalt.preset.internalSettings.detail" = "显示 Apple 内部设置包。部分系统服务行为可能改变。";
 "gestalt.preset.srd.title" = "Security Research Device 旗标";
 "gestalt.preset.srd.detail" = "修改 SRD 能力旗标。不会把设备变成 Apple SRD。";
-"gestalt.preset.carPlayUltra.title" = "CarPlay Ultra";
-"gestalt.preset.carPlayUltra.detail" = "开启新一代多屏 CarPlay 能力声明；需要车机与硬件支持。";
-"gestalt.preset.touch120.title" = "120Hz 触控采样投递";
-"gestalt.preset.touch120.detail" = "启用 120Hz 触控事件投递管线。";
-"gestalt.preset.hearingAid.title" = "AirPods 听力均衡与助听器低功耗";
-"gestalt.preset.hearingAid.detail" = "开启听力均衡、低功耗助听与功耗降低槽位。";
-"gestalt.preset.breathingApnea.title" = "睡眠呼吸暂停趋势检测";
-"gestalt.preset.breathingApnea.detail" = "开启呼吸紊乱测量与通知能力。";
-"gestalt.preset.usBloodOxygen.title" = "解除美版血氧软件限制";
-"gestalt.preset.usBloodOxygen.detail" = "声明美版合规血氧能力；不改变硬件传感器。";
-"gestalt.preset.workoutUltra.title" = "户外极限运动与日照时长";
-"gestalt.preset.workoutUltra.detail" = "开启极限运动模式与日照时长统计槽位。";
 "risk.gestalt.category.display.consequence" = "修改后通常需要重启（或 Respring）生效。只写设备已有的键，不会新增缓存键。";
 "risk.gestalt.category.display.worst_case" = "显示行为异常（如 AOD 亮度/布局不对）、耗电增加；极少数情况下需要恢复备份还原。";
 "risk.gestalt.category.display.recovery" = "在预设页关掉开关，或到备份中心恢复写入前自动快照；重启后生效。";
 "risk.gestalt.category.device.consequence" = "修改后通常需要重启生效。只影响设置页显示与系统能力声明，不改硬件。";
 "risk.gestalt.category.device.worst_case" = "对应设置项不出现或行为异常；硬件不支持的功能不会真实生效。";
 "risk.gestalt.category.device.recovery" = "关掉开关或用备份中心恢复写入前快照，重启即可。";
-"risk.gestalt.category.media.consequence" = "只改 CacheData 布尔槽位；写入前会校验本机 CacheUUID、长度与有效位。";
-"risk.gestalt.category.media.worst_case" = "硬件不支持的槽位不会真实生效；极少数情况下需要恢复备份并重启。";
-"risk.gestalt.category.media.recovery" = "在预设页关掉开关，或到备份中心恢复写入前快照；重启后生效。";
 "risk.gestalt.category.ipad.consequence" = "修改后需要重启。iPad 类预设主要影响设置页可见性。";
 "risk.gestalt.category.ipad.worst_case" = "台前调度等布局行为可能与目标设备不一致；在 iPhone 上开启 iPad 兼容可能出现应用显示异常。";
 "risk.gestalt.category.ipad.recovery" = "关掉开关或用备份中心恢复写入前快照。";
@@ -1115,28 +1081,10 @@
 "gestalt.region.title" = "区域与 Siri AI";
 "gestalt.region.snapshot_header" = "当前区域";
 "gestalt.region.snapshot_footer" = "只显示设备已有键的值。修改只写已有键，防止 iOS 27 开机重建缓存。";
-"gestalt.region.switch_header" = "切换区域";
-"gestalt.region.switch_footer" = "只改国家码与销售区域，不改监管型号——改监管型号等于改动设备的型式认证申报地，那属于 Siri AI 流程的范围。需要重启生效。";
-"gestalt.region.switch_current" = "当前区域";
-"gestalt.region.switch_apply" = "应用区域";
-"gestalt.region.switch_confirm_title" = "切换区域";
-"gestalt.region.switch_other" = "其他";
-"gestalt.region.switch_unknown" = "不在列表中";
-"risk.gestalt.regionSwitch.consequence" = "把 MobileGestalt 缓存里的国家码与销售区域改为所选区域，写入前自动记录一条备份快照。需要重启生效。";
-"risk.gestalt.regionSwitch.worst_case" = "重启后区域相关的商店内容、Siri 语言与部分系统功能可能变化；监管型号保持原值不动，因此不涉及型式认证申报。";
-"risk.gestalt.regionSwitch.recovery" = "在备份列表恢复到写入前快照并重启，即可回到原区域。";
 "gestalt.region.machine" = "机型标识";
 "gestalt.region.country" = "国家码";
 "gestalt.region.sales" = "销售区域";
 "gestalt.region.regulatory" = "监管型号";
-"gestalt.region.sysconfig" = "RegionInfoFromSysconfig（系统读取）";
-"gestalt.region.noncache" = "RegionInfo（非缓存键）";
-"gestalt.region.value_missing" = "（缺失）";
-"gestalt.region.mode" = "修改模式";
-"gestalt.region.mode.full_us" = "完整美版 LL + LL/A";
-"gestalt.region.mode.code_only" = "仅区域代码 LL（保留原销售后缀）";
-"gestalt.region.mode.other" = "未切换";
-"gestalt.region.stale_warning" = "非缓存键仍为旧值 %@，系统实际读取的是 %@。以“销售区域”一行为准。";
 "gestalt.region.native_header" = "原生 Siri AI（已核实机型）";
 "gestalt.region.native_model" = "识别为 %@";
 "gestalt.region.native_detail" = "只改国家码/销售区域/监管型号 + AI 旗标，不伪装硬件，Face ID 不受影响。需要重启。";
@@ -1165,15 +1113,6 @@
 "risk.supervised.consequence" = "直接修改 ConfigurationProfiles 容器中 CloudConfigurationDetails.plist 的 IsSupervised 键，立即写入并自动备份。退出设置 App 后生效。";
 "risk.supervised.worst_case" = "MDM 管理的设备会丢失管理关系；下次重启可能出现设置引导屏要求重新激活。";
 "risk.supervised.recovery" = "再次切换开关即可还原；或到备份中心恢复写入前自动快照。";
-"supervised.audit.header" = "伪监管残留体检";
-"supervised.audit.clean" = "未检测到伪造的监管配置文件";
-"supervised.audit.genuine" = "检测到真实 MDM 配置（组织：%@）";
-"supervised.audit.fake" = "检测到伪监管残留（组织：%@），建议清除";
-"supervised.audit.clear" = "清除伪监管残留";
-"supervised.audit.clear_confirm" = "将先备份文件，再删除只含 IsSupervised/OrganizationName 的 CloudConfigurationDetails.plist。真实 MDM 不会被改动。";
-"supervised.audit.cleared" = "已清除伪监管残留。";
-"supervised.audit.footer" = "仅当文件只含 IsSupervised / OrganizationName 且没有 MDM 证书链时才会清除；真实 MDM 不会被改动。";
-"supervised.error.not_residue" = "当前不是伪监管残留，未做修改。";
 "supervised.error.unavailable" = "CloudConfigurationDetails.plist 不存在。";
 "supervised.error.unreadable" = "无法读取配置描述文件。";
 "supervised.error.invalid" = "配置描述文件不是有效 plist。";
@@ -1218,6 +1157,7 @@
 "settings.experimental" = "实验功能";
 "settings.experimental_header" = "实验功能";
 "settings.experimental_footer" = "显示高风险实验流程（如 Siri AI 实验模式）。这些流程未经真机完整验证，最坏情况可能需要恢复设备。";
+"gestalt.presets.factory_protected" = "该能力出厂即为关闭（Erosion-CN v0.8.5 真机验证）：强行开启会断路生成式模型管线校验，导致照片“高质量”消除报错。已锁定。";
 "gestalt.region.error.factory_baseline" = "AI 能力旗标出厂为关闭，按出厂基线保护拒绝写入（照片高质量消除会报错）。";
 "cleaner.progress" = "清理中 %lld/%lld · 已释放 %@ · 当前：%@";
 "preview.too_large" = "文件超过 200 MB，为避免长时间等待未预加载。可直接点文件用系统方式打开。";
@@ -1272,7 +1212,6 @@
 "filereplace.error.target_missing" = "目标文件不存在。";
 "filereplace.error.source_missing" = "备份文件丢失或已删除。";
 "filereplace.error.backup_failed" = "备份失败（目标可能是目录或容器不可写）。";
-"filereplace.error.sidecar_not_regular" = "数据库的 -wal/-shm 附带文件不是普通文件，恢复已中止以防数据损坏。";
 "filereplace.blocked.file_name" = "核心系统文件（Gestalt 缓存/配置描述文件/钥匙串等）有专用功能页，拒绝裸替换。";
 "filereplace.blocked.prefix" = "系统安全目录（/System、/usr、keychains 等）拒绝裸替换。";
 "backend.notice.filereplace" = "应用容器内的替换在 iOS 26 与 27 均可用（按版本自动选择漏洞）。仅系统组容器内的目标在 iOS 26.0–26.6.1 不可写。";
@@ -1301,7 +1240,6 @@
 "gestalt.cards.advanced_title" = "高级工具";
 "gestalt.cards.footer.display" = "修改后需重启（或 Respring）生效；只写设备已有的键。";
 "gestalt.cards.footer.device" = "影响设置页可见性与能力声明，不改硬件。";
-"gestalt.cards.footer.media" = "这些能力来自 CacheData 二进制槽位；读取与写入都会先校验本机 dylib 布局。修改后请重启设备。";
 "gestalt.cards.footer.ipad" = "iPad 类预设主要影响设置页可见性，布局因设备而异。";
 "gestalt.cards.footer.intelligence" = "Apple Intelligence 还依赖硬件、区域与 Apple 服务端。";
 "gestalt.cards.footer.advanced" = "系统级内部旗标，影响多个系统服务；修改前请确认已了解风险。";
@@ -1309,13 +1247,10 @@
 "gestalt.cards.checkup_item" = "%lld.";
 "gestalt.cards.checkup_region" = "销售地区标识 (LL / LL/A)";
 "gestalt.cards.checkup_regulatory" = "美版监管型号";
-"gestalt.cards.checkup_regulatory_keep" = "监管型号（保留原厂 %@）";
 "gestalt.cards.checkup_gate" = "国行门控与互斥锁检查";
 "gestalt.cards.checkup_admission" = "端侧 AI 准入与子能力";
 "gestalt.cards.checkup_cfg_live" = "配置：%@ · 真机实时：%@";
 "gestalt.cards.checkup_gate_ok" = "green-tea=false · 无内部调试、SiriHub 与消除冲突";
-"gestalt.cards.checkup_gate_cn" = "green-tea=true · 国行门控仍开启";
-"gestalt.cards.checkup_gate_unknown" = "无法读取 CacheData（本机布局未通过校验）";
 "gestalt.cards.checkup_admission_native" = "本机 (%@) 硬件原生支持 Apple 智能（含照片消除、通话录音与转写）";
 "gestalt.cards.checkup_admission_unverified" = "本机硬件未在原生 AI 机型表中，需实验模式伪装";
 "gestalt.cards.badge_effective" = "真机已生效";
@@ -1511,15 +1446,6 @@
 "systemsettings.cleared" = "已清除。";
 "systemsettings.current_empty" = "未设置（原厂状态）";
 "systemsettings.edit_footer" = "写入系统配置描述文件的 LockScreenFootnote 键；单行、最多 256 字符；锁屏一次或 Respring 后生效。不走 MobileGestalt。";
-"systemsettings.asset_current_empty" = "未设置（原厂状态）";
-"systemsettings.asset_section.current" = "当前资产铭牌";
-"systemsettings.asset_section.edit" = "编辑资产铭牌";
-"systemsettings.asset_field_placeholder" = "例如：如捡到请联系 138…";
-"systemsettings.asset_apply" = "写入铭牌";
-"systemsettings.asset_clear" = "清除铭牌";
-"systemsettings.asset_applied" = "已写入 AssetTagInformation。";
-"systemsettings.asset_cleared" = "已清除 AssetTagInformation。";
-"systemsettings.asset_edit_footer" = "写入系统配置描述文件的 AssetTagInformation 键，用于锁屏/关于本机展示防丢信息；最多 256 字符。";
 "systemsettings.error.invalid" = "序列化失败，已取消写入。";
 "systemsettings.error.title" = "锁屏文字操作失败";
 "systemsettings.error.too_long" = "文字超过 256 字符上限。";
@@ -1544,14 +1470,14 @@
 "update.failure.offline" = "检查失败：无法连接 GitHub（设备离线或被墙，需代理/其它网络）。";
 "update.failure.other" = "检查失败：";
 
-// Field-import merge (3.2.5 rebuild)
+// GestaltX v1.1.1 #138 field-import merge (3.2.5 rebuild)
 "gestalt.error.layout_mismatch" = "导入 plist 的设备缓存标识与当前设备不匹配，已拒绝写入。";
 "gestalt.field.import_summary" = "导入完成：覆盖 %d 项，跳过 %d 项未知键，保留 %d 项。";
 
-// Config import errors (3.2.5 rebuild)
+// GestaltX v1.1.1 #133 config import errors (3.2.5 rebuild)
 "config.import_error.title" = "配置包导入失败";
 
-// Notification sound replacement (3.2.5 rebuild)
+// Notification sound replacement (3.2.5 rebuild, GestaltX App Audio Library parity)
 "home.card.sounds" = "通知音替换";
 "home.card.sounds_detail" = "替换应用通知音为自定义音频";
 "notification.sound.title" = "通知音替换";
@@ -1577,38 +1503,3 @@
 "notification.sound.error.container" = "无法解析该应用的容器路径，请确认应用已安装且容器可访问。";
 "notification.sound.error.target" = "目标路径无效。";
 "notification.sound.error.source" = "无法读取所选音频文件。";
-"onboarding.support_ok" = "此设备受支持";
-"onboarding.support_no" = "此设备不受支持";
-"onboarding.app_group_note" = "需要 App Group 签名";
-"wifishare.title" = "Wi-Fi 互传";
-"wifishare.enable" = "启用服务";
-"wifishare.stopped" = "服务未启动。启用后，同一 Wi-Fi 下的浏览器可以访问本机文件。";
-"wifishare.starting" = "正在启动…";
-"wifishare.address" = "访问地址";
-"wifishare.connections" = "当前连接";
-"wifishare.footer" = "仅在本地网络内提供访问，不经过任何服务器。Android 与电脑浏览器均可使用。";
-"wifishare.credentials" = "登录凭据";
-"wifishare.user" = "用户名";
-"wifishare.pin" = "访问密码";
-"wifishare.folder" = "共享目录";
-"wifishare.pin_footer" = "密码每次启用都会重新生成，退出本页即停止服务。浏览器弹出的登录框里填这两项。";
-"wifishare.requests" = "最近请求";
-"wifishare.usage" = "命令行用法";
-"wifishare.usage_curl" = "上传：curl -u 3106:PIN -T ./file \"http://地址:端口/api/upload?path=file\"";
-"wifishare.usage_footer" = "下载单文件用 /api/download?path=名字，打包整个目录用 /api/zip?path=目录名。同名上传会自动改名，不会覆盖已有文件。";
-"wifishare.entry" = "Wi-Fi 互传";
-"wifishare.entry_footer" = "在同一 Wi-Fi 下用浏览器传输文件，无需数据线或云盘。";
-"unlock.title" = "解锁";
-"unlock.backend" = "访问后端";
-"unlock.os" = "系统版本";
-"unlock.footer" = "解锁会运行内核漏洞链以获得容器读写权限。每次启动都需要重新解锁，内核态不会持久保留。";
-"unlock.status" = "解锁状态";
-"unlock.result" = "结果";
-"unlock.duration" = "耗时";
-"unlock.run" = "开始解锁";
-"unlock.running" = "解锁中…";
-"unlock.warning" = "内核链耗时 10–30 秒，期间设备可能短暂卡顿；若竞态失败，设备可能自动重启。解锁失败后可以再次尝试，但请先让设备重启完成。";
-"unlock.log" = "实时日志";
-"unlock.log_empty" = "尚无日志。点上方按钮后，链的每一步都会出现在这里。";
-"unlock.banner_title" = "需要解锁";
-"unlock.banner_detail" = "点此运行内核链以获得容器访问";
