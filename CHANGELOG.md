@@ -2,20 +2,6 @@
 
 All notable user-facing changes are documented in this file.
 
-## [Unreleased] — worse_query / WQFiles synchronization
-
-### Fixed
-
-- Unified the app-facing WQFiles compatibility layer with the native `worse_query` backend. `wq_app_group` now uses the entitlement resolver from `worse_query`; `wq_grant` no longer runs a second, weaker private `container_query` implementation or caches one App Group token under unrelated path keys.
-- Added `wq_grant_writable`, routed through `worse_query_grant_ex(..., 1)` so write workflows can require the backend's actual write probe instead of treating a read grant as write permission.
-- Directory listing and file reads now use the WQFiles descriptor-safety helpers: component-by-component no-symlink directory opens, regular-file-only reads, and descriptor-based container metadata xattr reads.
-- Preserved WQFiles GPL-3.0-or-later attribution and the upstream worse_query attribution; no second copy of the exploit implementation was introduced.
-
-### Verification
-
-- `Tests/run_worse_query_guardrails.sh` now also checks that WQFiles calls share the hardened native token cache, writable grants are exposed, and listing/reading avoid symlink-following path opens.
-- Xcode compilation and physical-device validation remain unverified in this environment.
-
 ## [3.2.6] - 2026-11-17
 
 iOS 27 写入失败专项（spec `02-00-ios27-grant-hardening`）：修复 iOS 27 上文件管理的修改/复制粘贴/替换全部失败时错误被吞、无法归因的问题。授权链四处单点加固 + 失败码诊断透传 + 写入自动重试。新包 SHA256 `8141949c8e57417be0d3e7a32c50d0cdaa5458b68634dd53726f114fba31178d`（`dist/SHA256SUMS.txt` 为准）。真机验证矩阵见下文「验证」。
@@ -441,9 +427,3 @@ iOS 27 写入失败专项（spec `02-00-ios27-grant-hardening`）：修复 iOS 2
 - Verified iOS 26.0–26.6.1.
 - Verified iOS 27 beta 1–4 builds listed in the app.
 - Unlisted iOS 27 builds remain disabled until explicitly verified.
-
-## 2026-11-22 — Worse Query integration QA upgrade
-
-- Added `Tests/run_worse_query_guardrails.sh` to validate the native write-aware grant API, cache recovery entry points, Swift real-access probe, retry wiring, diagnostics recording, App Groups entitlement, and Xcode source membership.
-- Wired the guardrail suite into `build_esign_ready_ipa.sh`; packaging now stops before Xcode build if the integration contract regresses.
-- No kernel/sandbox-escape payload or exploit primitive was changed. The checks are static and do not prove runtime compatibility on a physical iPhone.
