@@ -91,6 +91,7 @@ struct HomeView: View {
     @EnvironmentObject private var appState: AppState
     @ObservedObject var patchStore: PatchProjectStore
     @State private var showCleaner = false
+    @State private var showUnlock = false // Đã thêm biến này
 
     var body: some View {
         ZStack {
@@ -121,6 +122,23 @@ struct HomeView: View {
                     .padding(16)
                     .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
                     .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(Color.white.opacity(0.3), lineWidth: 0.5))
+
+                    // NÚT UNLOCK KERNEL ĐÃ ĐƯỢC THÊM VÀO ĐÂY
+                    if appState.needsUnlock {
+                        Button {
+                            showUnlock = true
+                        } label: {
+                            HStack {
+                                Image(systemName: "lock.open.fill").font(.title3)
+                                Text("MỞ KHÓA SANDBOX (KERNEL)").font(.system(size: 13, weight: .black, design: .rounded)).tracking(1)
+                            }
+                            .foregroundStyle(.black)
+                            .frame(maxWidth: .infinity, minHeight: 52)
+                            .background(Color.green, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .shadow(color: .green.opacity(0.5), radius: 10, x: 0, y: 5)
+                        }
+                        .buttonStyle(.plain)
+                    }
 
                     VStack(alignment: .leading, spacing: 12) {
                         Label("LAUNCH GAME", systemImage: "arrow.up.forward.app.fill").font(.system(size: 12, weight: .black, design: .rounded)).tracking(1.4).foregroundStyle(.white)
@@ -169,6 +187,11 @@ struct HomeView: View {
             }
         }
         .sheet(isPresented: $showCleaner) { CleanerView() }
+        .sheet(isPresented: $showUnlock) { // Đã thêm phần hiển thị màn hình Unlock
+            NavigationStack {
+                UnlockView()
+            }
+        }
     }
 
     private func statusRow(icon: String, title: String, value: String, color: Color = .white) -> some View {
@@ -313,8 +336,10 @@ struct FeaturesView: View {
 
 // MARK: - CÀI ĐẶT
 struct SettingsView: View {
+    @EnvironmentObject private var appState: AppState
     @ObservedObject private var audioManager = AudioManager.shared
     @State private var showDiag = false
+    @State private var showUnlock = false
 
     var body: some View {
         ZStack {
@@ -347,7 +372,27 @@ struct SettingsView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("CHẨN ĐOÁN SANDBOX").font(.caption).foregroundStyle(.white.opacity(0.5))
+                        Text("HỆ THỐNG & BẢO MẬT").font(.caption).foregroundStyle(.white.opacity(0.5))
+                        
+                        if appState.needsUnlock {
+                            Button {
+                                showUnlock = true
+                            } label: {
+                                HStack {
+                                    Image(systemName: "lock.open.fill")
+                                    Text("Mở khoá Sandbox (Kernel)")
+                                    Spacer()
+                                    Image(systemName: "chevron.right").opacity(0.5)
+                                }
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .padding()
+                                .background(Color.green.opacity(0.3), in: RoundedRectangle(cornerRadius: 16))
+                                .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.green, lineWidth: 0.5))
+                            }
+                            .buttonStyle(.plain)
+                        }
+
                         Button {
                             showDiag = true
                         } label: {
@@ -378,9 +423,8 @@ struct SettingsView: View {
                 }.padding(.horizontal, 20)
             }
         }
-        .sheet(isPresented: $showDiag) {
-            SandboxDiagnosticsView()
-        }
+        .sheet(isPresented: $showDiag) { SandboxDiagnosticsView() }
+        .sheet(isPresented: $showUnlock) { NavigationStack { UnlockView() } }
     }
 }
 
