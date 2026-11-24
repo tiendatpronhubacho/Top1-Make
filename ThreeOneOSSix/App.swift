@@ -369,8 +369,9 @@ final class LicenseManager: ObservableObject {
 
     private func getOrCreateSigningKey() throws -> SecureEnclave.P256.Signing.PrivateKey {
         if let data = try keychainReadData(account: LicenseConfig.signingKeyAccount) {
-            let access = try makeKeyAccessControl()
-            return try SecureEnclave.P256.Signing.PrivateKey(dataRepresentation: data, accessControl: access)
+            // Restore the previously generated Secure Enclave key from its representation.
+            // accessControl is only supplied when creating a new key, not when restoring it.
+            return try SecureEnclave.P256.Signing.PrivateKey(dataRepresentation: data)
         }
         let access = try makeKeyAccessControl()
         let key = try SecureEnclave.P256.Signing.PrivateKey(compactRepresentable: false, accessControl: access)
