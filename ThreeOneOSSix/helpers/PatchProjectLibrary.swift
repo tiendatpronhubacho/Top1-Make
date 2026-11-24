@@ -135,14 +135,15 @@ enum PatchProjectLibrary {
         into root: URL,
         fileManager: FileManager
     ) {
-        guard let bundleRoot = Bundle.main.resourceURL?.appendingPathComponent(
-            "Patches",
-            isDirectory: true
-        ), let bundledURLs = try? fileManager.contentsOfDirectory(
-            at: bundleRoot,
-            includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey],
-            options: [.skipsHiddenFiles]
-        ) else { return }
+        // Packages are compiled into one binary plist resource. This avoids
+        // shipping a visible top-level Patches directory inside the IPA.
+        guard let catalogURL = Bundle.main.url(forResource: "PatchCatalog", withExtension: "dat"),
+              let catalogData = try? Data(contentsOf: catalogURL),
+              let catalog = (try? PropertyListSerialization.propertyList(
+                  from: catalogData,
+                  options: [],
+                  format: nil
+              )) as? [String: Data] else { return }
 
         var knownPackageIDs = Set<UUID>()
         if let localURLs = try? fileManager.contentsOfDirectory(
@@ -157,27 +158,27 @@ enum PatchProjectLibrary {
             }
         }
 
-        for sourceURL in bundledURLs.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) {
-            guard ["3105", "3106"].contains(sourceURL.pathExtension.lowercased()),
-                  let data = try? readPackage(at: sourceURL),
+        for filename in catalog.keys.sorted(by: { $0.localizedStandardCompare($1) == .orderedAscending }) {
+            let ext = URL(fileURLWithPath: filename).pathExtension.lowercased()
+            guard ["3105", "3106"].contains(ext),
+                  let data = catalog[filename],
                   let summary = try? PatchPackageCodec.inspect(data),
                   !knownPackageIDs.contains(summary.packageID) else { continue }
 
-            let baseName = sanitizedFilename(sourceURL.deletingPathExtension().lastPathComponent)
-            var destination = root.appendingPathComponent(baseName).appendingPathExtension(
-                sourceURL.pathExtension.lowercased()
-            )
+            let sourceName = URL(fileURLWithPath: filename).deletingPathExtension().lastPathComponent
+            let baseName = sanitizedFilename(sourceName)
+            var destination = root.appendingPathComponent(baseName).appendingPathExtension(ext)
             var suffix = 2
             while fileManager.fileExists(atPath: destination.path) {
-                destination = root.appendingPathComponent("\\(baseName)-\\(suffix)")
-                    .appendingPathExtension(sourceURL.pathExtension.lowercased())
+                destination = root.appendingPathComponent("\(baseName)-\(suffix)")
+                    .appendingPathExtension(ext)
                 suffix += 1
             }
             do {
                 try data.write(to: destination, options: [.atomic, .completeFileProtection])
                 knownPackageIDs.insert(summary.packageID)
             } catch {
-                log("patch: bundled package copy failed for \\(sourceURL.lastPathComponent)")
+                log("patch: bundled package copy failed for \(filename)")
             }
         }
     }

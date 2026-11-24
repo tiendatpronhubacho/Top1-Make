@@ -449,8 +449,6 @@ private enum LicenseFailure: LocalizedError {
         case .keyStorage: return "Không thể truy cập Keychain hoặc Secure Enclave trên thiết bị này."
         case .server(let code):
             let messages: [String: String] = [
-                "server_locked": "Máy chủ đã bị khóa khẩn cấp. Ứng dụng tạm thời không thể xác thực. Vui lòng liên hệ quản trị viên.",
-                "server_maintenance": "Máy chủ đang bảo trì. Vui lòng thử lại sau.",
                 "license_invalid": "License Key không tồn tại hoặc đã bị vô hiệu hóa.",
                 "license_expired": "License Key đã hết hạn.",
                 "device_blocked": "Thiết bị này đã bị quản trị viên khóa.",
