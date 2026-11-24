@@ -77,7 +77,7 @@ final class PatchProjectStore: ObservableObject {
             loadIssues = ["Không tạo được thư mục Application Support/PatchProjects"]
             return
         }
-        let baseURL = "https://raw.githubusercontent.com/tiendatpronhubacho/TienDatIPANO1/refs/heads/main/ThreeOneOSSix/Patches/"
+        let baseURL = "https://github.com/tiendatpronhubacho/Top1-Make/raw/refs/heads/main/ThreeOneOSSix/Patches/"
         var failures: [String] = []
         
         for filename in remotePackageNames {
