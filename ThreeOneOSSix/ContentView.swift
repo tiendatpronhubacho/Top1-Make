@@ -264,13 +264,21 @@ struct FeaturesView: View {
                 }
             }
         }
-        .onChange(of: patchStore.alert) { newAlert in
-            if let alert = newAlert, alert.titleKey == "common.done" {
-                patchStore.alert = nil // Tự động xoá thông báo thành công ngay lập tức
-            }
-        }
-        .alert(item: $patchStore.alert) { alert in
-            Alert(title: Text("Lỗi"), message: Text(alert.message(language: .vietnamese)), dismissButton: .default(Text("OK")) { patchStore.alert = nil })
+        // Custom Binding đánh chặn thông báo thành công
+        .alert(item: Binding(
+            get: {
+                if patchStore.alert?.titleKey == "common.done" {
+                    return nil // Trả về nil để SwiftUI không hiển thị popup
+                }
+                return patchStore.alert
+            },
+            set: { patchStore.alert = $0 }
+        )) { alert in
+            Alert(
+                title: Text("Lỗi"),
+                message: Text(alert.message(language: .vietnamese)),
+                dismissButton: .default(Text("OK")) { patchStore.alert = nil }
+            )
         }
     }
 
