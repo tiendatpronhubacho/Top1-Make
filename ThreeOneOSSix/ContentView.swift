@@ -292,15 +292,15 @@ struct FeaturesView: View {
     private func patchList(isAim: Bool) -> some View {
         VStack(spacing: 10) {
             if isAim {
-                patchRow(name: "Aim Drag", target: "FREE FIRE • VN", package: "Aim Drag.3105")
-                patchRow(name: "Aim Neck", target: "FREE FIRE • VN", package: "Aim Neck.3105")
-                patchRow(name: "Aim Body", target: "FREE FIRE • VN", package: "Aim Body.3105")
-                patchRow(name: "Nhe Tam", target: "FREE FIRE • VN", package: "Nhe Tam.3105")
-                patchRow(name: "Aim Chest", target: "FREE FIRE • VN", package: "Aim Chest.3105")
-                patchRow(name: "Aim R8", target: "FREE FIRE • VN", package: "Aim R8.3105")
-                patchRow(name: "Aim Magic", target: "FREE FIRE • VN", package: "Aim Magic.3105")
-                patchRow(name: "Neck Anten", target: "FREE FIRE • VN", package: "Neck Anten.3105")
-                patchRow(name: "Nhe Anten", target: "FREE FIRE • VN", package: "Nhe Anten.3105")
+                patchRow(name: "Aim Drag", target: "Log • 40", package: "Aim Drag.3105")
+                patchRow(name: "Aim Neck", target: "Log • 40", package: "Aim Neck.3105")
+                patchRow(name: "Aim Body", target: "Log • Sảnh", package: "Aim Body.3105")
+                patchRow(name: "Nhe Tam", target: "Log • 40", package: "Nhe Tam.3105")
+                patchRow(name: "Aim Chest", target: "Log • 40", package: "Aim Chest.3105")
+                patchRow(name: "Aim R8", target: "Log • 40", package: "Aim R8.3105")
+                patchRow(name: "Aim Magic", target: "Log • 40", package: "Aim Magic.3105")
+                patchRow(name: "Neck Anten", target: "Log • 40", package: "Neck Anten.3105")
+                patchRow(name: "Nhe Anten", target: "Log • 40", package: "Nhe Anten.3105")
             } else {
                 patchRow(name: "Mod Sonic", target: "FREE FIRE • DIMITRI", package: "Mod Sonic Dimitri.3105")
                 patchRow(name: "Mod Thỏ", target: "FREE FIRE • DIMITRI", package: "Mod Thỏ Dimitri.3105")
