@@ -29,8 +29,7 @@ enum SandboxAccess {
         if ExploitSupportPolicy.supportsKernelExploit(major: v.major, minor: v.minor, patch: v.patch) {
             return .kernel
         }
-        if ExploitSupportPolicy.supportsWorseQuery(major: v.major, minor: v.minor, patch: v.patch) ||
-            ExploitSupportPolicy.isExperimental(major: v.major, minor: v.minor) {
+        if ExploitSupportPolicy.supportsWorseQuery(major: v.major, minor: v.minor, patch: v.patch) {
             return .worseQuery
         }
         if ExploitSupportPolicy.supportsBadQuery(major: v.major, minor: v.minor, patch: v.patch) {
@@ -115,7 +114,7 @@ enum SandboxAccess {
                   let groupURL = FileManager.default.containerURL(
                     forSecurityApplicationGroupIdentifier: group
                   ) else {
-                log("sandbox: no App Group entitlement — worse_query cannot run")
+                log("sandbox: no App Group entitlement -- worse_query cannot run")
                 return false
             }
             // Exercise the real query path on our own group container first;
@@ -161,6 +160,14 @@ enum SandboxAccess {
         return value
     }
 
+    /// Clears the TTL cache without touching the worse_query token cache.
+    /// Used by the diagnostics view after a manual Caches swap reset.
+    static func invalidateProbeCache() {
+        probeCacheLock.lock()
+        probeCache = nil
+        probeCacheLock.unlock()
+    }
+
     static func grant(path: String, writable: Bool = false) -> Int64 {
         let clean = path.hasSuffix("/") && path.count > 1 ? String(path.dropLast()) : path
         let handle: Int64
@@ -200,7 +207,7 @@ enum SandboxAccess {
     }
 
     /// Drops every cached worse_query token. Used by the retry path when a
-    /// write hits EPERM/EACCES despite a successful grant — a stale token in
+    /// write hits EPERM/EACCES despite a successful grant -- a stale token in
     /// the LRU cache is the usual suspect.
     static func invalidateWorseQueryCache() {
         guard backend == .worseQuery else { return }
@@ -221,8 +228,8 @@ enum SandboxAccess {
     /// - worseQuery (26.7+/27): the full retry chain via GrantRetry.withRetry.
     ///
     /// macOS harness note: on macOS the backend resolves to worseQuery
-    /// (Darwin 27) but grants are meaningless — grant returns -1 and the
-    /// verify_* harnesses rely on that being non-fatal — so the retry chain
+    /// (Darwin 27) but grants are meaningless -- grant returns -1 and the
+    /// verify_* harnesses rely on that being non-fatal -- so the retry chain
     /// is iOS-only.
     static func withGrant<T>(
         directory: String,
