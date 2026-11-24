@@ -155,18 +155,29 @@ class AppState: ObservableObject {
     private func refreshKernelExploitStatus() {
         guard !kernelExploitRunning else { return }
 
-        // iOS < 26: kernel R/W success persists (no sandbox probe)
-        // iOS >= 26: verify full sandbox escape is still active
-        if KernelExploit.requiresSandboxEscape {
-            if KernelExploit.hasSandboxAccess() {
-                if !exploitStatus.isSuccess {
-                    exploitStatus = .success(method: SandboxAccess.backend.displayName)
-                    log("app: existing \(SandboxAccess.backend.displayName) access is still active")
-                }
-            } else if exploitStatus.isSuccess {
-                exploitStatus = .notStarted
-                log("app: sandbox access is no longer active")
+        // Always verify the real filesystem capability on launch. The old
+        // kernel path skipped this probe entirely, so a new process always
+        // started with `.notStarted` even when the sandbox grant was still
+        // usable. Never restore success from a persisted Boolean: the probe
+        // must succeed in this process before privileged UI is enabled.
+        let hasAccess: Bool
+        switch SandboxAccess.backend {
+        case .kernel:
+            hasAccess = KernelExploit.hasKernelSandboxAccess()
+        case .badQuery, .worseQuery:
+            hasAccess = KernelExploit.hasSandboxAccess()
+        case .unsupported:
+            hasAccess = false
+        }
+
+        if hasAccess {
+            if !exploitStatus.isSuccess {
+                exploitStatus = .success(method: SandboxAccess.backend.displayName)
+                log("app: verified existing \(SandboxAccess.backend.displayName) access is active")
             }
+        } else if exploitStatus.isSuccess {
+            exploitStatus = .notStarted
+            log("app: access probe failed; unlock is required again")
         }
     }
 
