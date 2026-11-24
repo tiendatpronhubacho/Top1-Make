@@ -123,7 +123,7 @@ struct HomeView: View {
                     .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
                     .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(Color.white.opacity(0.3), lineWidth: 0.5))
 
-                    // NÚT UNLOCK KERNEL ĐÃ ĐƯỢC THÊM VÀO ĐÂY
+                    // NÚT UNLOCK KERNEL
                     if appState.needsUnlock {
                         Button {
                             showUnlock = true
@@ -187,7 +187,7 @@ struct HomeView: View {
             }
         }
         .sheet(isPresented: $showCleaner) { CleanerView() }
-        .sheet(isPresented: $showUnlock) { // Đã thêm phần hiển thị màn hình Unlock
+        .sheet(isPresented: $showUnlock) {
             NavigationStack {
                 UnlockView()
             }
@@ -264,8 +264,13 @@ struct FeaturesView: View {
                 }
             }
         }
+        .onChange(of: patchStore.alert) { newAlert in
+            if let alert = newAlert, alert.titleKey == "common.done" {
+                patchStore.alert = nil // Tự động xoá thông báo thành công ngay lập tức
+            }
+        }
         .alert(item: $patchStore.alert) { alert in
-            Alert(title: Text(alert.titleKey == "common.done" ? "Thành công" : "Lỗi"), message: Text(alert.message(language: .vietnamese)), dismissButton: .default(Text("OK")) { patchStore.alert = nil })
+            Alert(title: Text("Lỗi"), message: Text(alert.message(language: .vietnamese)), dismissButton: .default(Text("OK")) { patchStore.alert = nil })
         }
     }
 
