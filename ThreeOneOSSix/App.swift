@@ -8,7 +8,6 @@ struct ThreeOneOSSixApp: App {
     @StateObject private var appState = AppState()
     @StateObject private var patchDraftCoordinator = PatchDraftCoordinator()
     @StateObject private var fileOperationCoordinator = FileOperationCoordinator()
-    @StateObject private var patchStore = PatchProjectStore()
     @StateObject private var licenseManager = LicenseManager()
     
     @AppStorage(AppLanguage.storageKey) private var languageCode = AppLanguage.english.rawValue
@@ -36,7 +35,6 @@ struct ThreeOneOSSixApp: App {
                         .environmentObject(appState)
                         .environmentObject(patchDraftCoordinator)
                         .environmentObject(fileOperationCoordinator)
-                        .environmentObject(patchStore)
                         .environment(\.appLanguage, language)
                         .environment(\.locale, language.locale)
                 } else {
@@ -49,12 +47,10 @@ struct ThreeOneOSSixApp: App {
             .environmentObject(licenseManager)
             .preferredColorScheme(.dark)
             .onAppear {
-                appState.detectSupport()
                 Task { await licenseManager.refresh() }
             }
             .onChange(of: scenePhase) { phase in
                 guard phase == .active else { return }
-                appState.detectSupport()
                 Task { await licenseManager.refresh() }
             }
         }
@@ -74,6 +70,10 @@ class AppState: ObservableObject {
     }
     @Published var kernelExploitRunning = false
 
+    // Do not repeat support detection when the app returns from background.
+    // The successful unlock state remains in this AppState for this process.
+    private var didDetectSupport = false
+
     var kernelExploitApplicable: Bool {
         KernelExploit.isApplicable(
             major: AppInfo.versionTuple.major,
@@ -87,6 +87,9 @@ class AppState: ObservableObject {
     var isSupported: Bool { unsupportedMessage == nil }
 
     func detectSupport() {
+        guard !didDetectSupport else { return }
+        didDetectSupport = true
+
         let v = AppInfo.versionTuple
         let supported = ExploitSupportPolicy.isSupported(
             major: v.major,
@@ -365,26 +368,15 @@ final class LicenseManager: ObservableObject {
     }
 
     private func getOrCreateSigningKey() throws -> SecureEnclave.P256.Signing.PrivateKey {
-    if let data = try keychainReadData(account: LicenseConfig.signingKeyAccount) {
-        return try SecureEnclave.P256.Signing.PrivateKey(
-            dataRepresentation: data
-        )
+        if let data = try keychainReadData(account: LicenseConfig.signingKeyAccount) {
+            let access = try makeKeyAccessControl()
+            return try SecureEnclave.P256.Signing.PrivateKey(dataRepresentation: data, accessControl: access)
+        }
+        let access = try makeKeyAccessControl()
+        let key = try SecureEnclave.P256.Signing.PrivateKey(compactRepresentable: false, accessControl: access)
+        try keychainSaveData(key.dataRepresentation, account: LicenseConfig.signingKeyAccount)
+        return key
     }
-
-    let access = try makeKeyAccessControl()
-
-    let key = try SecureEnclave.P256.Signing.PrivateKey(
-        compactRepresentable: false,
-        accessControl: access
-    )
-
-    try keychainSaveData(
-        key.dataRepresentation,
-        account: LicenseConfig.signingKeyAccount
-    )
-
-    return key
-}
 
     private func makeKeyAccessControl() throws -> SecAccessControl {
         var error: Unmanaged<CFError>?
