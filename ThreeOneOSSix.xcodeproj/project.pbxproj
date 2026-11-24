@@ -376,7 +376,7 @@
 		3106S101 /* HexViewerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HexViewerView.swift; sourceTree = "<group>"; };
 		3106S102 /* PlistEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlistEditorView.swift; sourceTree = "<group>"; };
 		3106S103 /* FileInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileInfoView.swift; sourceTree = "<group>"; };
-		5ABDDF664AFB46B6B91DCF6C /* Patches */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Patches; sourceTree = "<group>"; };
+		5ABDDF664AFB46B6B91DCF6C /* Patches */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Patches; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
