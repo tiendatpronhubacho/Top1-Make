@@ -37,6 +37,8 @@ struct PatchPasswordRequest: Identifiable {
 enum PatchProjectLibrary {
     private static let authorCopiesDirectoryName = ".AuthorCopies"
     private static let originsDirectoryName = ".Origins"
+    private static let bundledManifestFilename = ".BundledPackages.plist"
+    private static let userImportsDirectoryName = ".UserImports"
 
     static func packageRootURL(fileManager: FileManager = .default) throws -> URL {
         let base = try fileManager.url(
@@ -56,6 +58,7 @@ enum PatchProjectLibrary {
         _ = try? backupRootURL(fileManager: fileManager)
         _ = try? authorCopiesRootURL(fileManager: fileManager)
         _ = try? originsRootURL(fileManager: fileManager)
+        _ = try? userImportsRootURL(fileManager: fileManager)
     }
 
     static func backupRootURL(fileManager: FileManager = .default) throws -> URL {
@@ -129,14 +132,14 @@ enum PatchProjectLibrary {
         }
     }
 
-    /// Copies bundled Tiến Đạt patch packages into the user's patch library once.
-    /// Existing packages are never overwritten; package IDs, not filenames, define identity.
+    /// Synchronizes packages shipped in PatchCatalog.dat into the local library.
+    /// Bundled packages are updated by catalog filename, because a replacement
+    /// package may intentionally have a new packageID. User imports and active
+    /// patches are left untouched.
     private static func seedBundledPackages(
         into root: URL,
         fileManager: FileManager
     ) {
-        // Packages are compiled into one binary plist resource. This avoids
-        // shipping a visible top-level Patches directory inside the IPA.
         guard let catalogURL = Bundle.main.url(forResource: "PatchCatalog", withExtension: "dat"),
               let catalogData = try? Data(contentsOf: catalogURL),
               let catalog = (try? PropertyListSerialization.propertyList(
@@ -145,29 +148,180 @@ enum PatchProjectLibrary {
                   format: nil
               )) as? [String: Data] else { return }
 
-        var knownPackageIDs = Set<UUID>()
-        if let localURLs = try? fileManager.contentsOfDirectory(
+        var manifest = loadBundledManifest(from: root)
+        let localURLs = (try? fileManager.contentsOfDirectory(
             at: root,
             includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey],
-            options: [.skipsHiddenFiles]
-        ) {
-            for url in localURLs where ["3105", "3106"].contains(url.pathExtension.lowercased()) {
-                guard let data = try? readPackage(at: url),
-                      let summary = try? PatchPackageCodec.inspect(data) else { continue }
-                knownPackageIDs.insert(summary.packageID)
-            }
+            options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants]
+        )) ?? []
+        var localByID: [UUID: URL] = [:]
+        for url in localURLs where ["3105", "3106"].contains(url.pathExtension.lowercased()) {
+            guard let data = try? readPackage(at: url),
+                  let summary = try? PatchPackageCodec.inspect(data) else { continue }
+            localByID[summary.packageID] = url
         }
 
+        var manifestChanged = false
         for filename in catalog.keys.sorted(by: { $0.localizedStandardCompare($1) == .orderedAscending }) {
-            let ext = URL(fileURLWithPath: filename).pathExtension.lowercased()
+            let sourceURL = URL(fileURLWithPath: filename)
+            let ext = sourceURL.pathExtension.lowercased()
             guard ["3105", "3106"].contains(ext),
-                  let data = catalog[filename],
-                  let summary = try? PatchPackageCodec.inspect(data),
-                  !knownPackageIDs.contains(summary.packageID) else { continue }
+                  let bundledData = catalog[filename],
+                  let bundledSummary = try? PatchPackageCodec.inspect(bundledData) else { continue }
 
-            let sourceName = URL(fileURLWithPath: filename).deletingPathExtension().lastPathComponent
+            let sourceName = sourceURL.deletingPathExtension().lastPathComponent
             let baseName = sanitizedFilename(sourceName)
-            var destination = root.appendingPathComponent(baseName).appendingPathExtension(ext)
+            let canonicalURL = root.appendingPathComponent(baseName).appendingPathExtension(ext)
+
+            // Prefer the persisted mapping, then the exact package ID. For
+            // installations predating the manifest, the canonical filename is
+            // the legacy seed location used by the original implementation.
+            var existingURL: URL?
+            if let localFilename = manifest[filename] {
+                let safeLocalFilename = URL(fileURLWithPath: localFilename).lastPathComponent
+                let mapped = root.appendingPathComponent(safeLocalFilename)
+                if safeLocalFilename == localFilename,
+                   fileManager.fileExists(atPath: mapped.path) {
+                    existingURL = mapped
+                }
+            }
+            if existingURL == nil, let sameIDURL = localByID[bundledSummary.packageID] {
+                existingURL = sameIDURL
+            }
+            if existingURL == nil, fileManager.fileExists(atPath: canonicalURL.path) {
+                existingURL = canonicalURL
+            }
+
+            // Older app versions used a "-2", "-3" suffix when a user file
+            // already occupied the canonical bundled filename. If that
+            // canonical file is marked as user-owned, look for the legacy
+            // suffixed bundled copy before creating another duplicate.
+            if let selectedURL = existingURL,
+               selectedURL.standardizedFileURL == canonicalURL.standardizedFileURL,
+               let selectedData = try? readPackage(at: selectedURL),
+               let selectedSummary = try? PatchPackageCodec.inspect(selectedData) {
+                let selectedIsProtected = isAuthorCopy(
+                    packageID: selectedSummary.packageID,
+                    fileManager: fileManager
+                ) || loadOrigin(
+                    packageID: selectedSummary.packageID,
+                    fileManager: fileManager
+                ) != nil || isUserImport(
+                    packageID: selectedSummary.packageID,
+                    fileManager: fileManager
+                )
+                if selectedIsProtected {
+                    let suffixedCandidates = localURLs.filter { candidate in
+                        guard candidate.pathExtension.lowercased() == ext else { return false }
+                        let stem = candidate.deletingPathExtension().lastPathComponent
+                        guard stem.hasPrefix(baseName + "-") else { return false }
+                        return Int(stem.dropFirst(baseName.count + 1)) != nil
+                    }.sorted { lhs, rhs in
+                        let left = Int(lhs.deletingPathExtension().lastPathComponent.dropFirst(baseName.count + 1)) ?? Int.max
+                        let right = Int(rhs.deletingPathExtension().lastPathComponent.dropFirst(baseName.count + 1)) ?? Int.max
+                        return left < right
+                    }
+                    for candidate in suffixedCandidates {
+                        guard let candidateData = try? readPackage(at: candidate),
+                              let candidateSummary = try? PatchPackageCodec.inspect(candidateData) else { continue }
+                        let candidateIsProtected = isAuthorCopy(
+                            packageID: candidateSummary.packageID,
+                            fileManager: fileManager
+                        ) || loadOrigin(
+                            packageID: candidateSummary.packageID,
+                            fileManager: fileManager
+                        ) != nil || isUserImport(
+                            packageID: candidateSummary.packageID,
+                            fileManager: fileManager
+                        )
+                        if !candidateIsProtected {
+                            existingURL = candidate
+                            break
+                        }
+                    }
+                }
+            }
+
+            if let existingURL,
+               let existingData = try? readPackage(at: existingURL),
+               let existingSummary = try? PatchPackageCodec.inspect(existingData) {
+                // Never replace an author copy or a package imported from a
+                // repository. The marker is checked against the old ID because
+                // a bundled replacement can carry a different ID.
+                let protectedCopy = isAuthorCopy(
+                    packageID: existingSummary.packageID,
+                    fileManager: fileManager
+                ) || loadOrigin(
+                    packageID: existingSummary.packageID,
+                    fileManager: fileManager
+                ) != nil || isUserImport(
+                    packageID: existingSummary.packageID,
+                    fileManager: fileManager
+                )
+
+                if protectedCopy {
+                    // A same-ID package may be a user import; do not overwrite it.
+                    // Create a separate bundled copy below unless it is already
+                    // the exact catalog payload.
+                    if existingData == bundledData {
+                        manifest[filename] = existingURL.lastPathComponent
+                        manifestChanged = true
+                        continue
+                    }
+                } else {
+                    let backupRoot = try? backupRootURL(fileManager: fileManager)
+                    let isActive = backupRoot.map {
+                        PatchTransaction.latestReceipt(
+                            projectID: existingSummary.packageID,
+                            backupRoot: $0,
+                            fileManager: fileManager
+                        ) != nil
+                    } ?? false
+
+                    if isActive {
+                        // Keep the old bytes while the patch is applied. The
+                        // next library load retries this catalog update.
+                        manifest[filename] = existingURL.lastPathComponent
+                        manifestChanged = true
+                        continue
+                    }
+
+                    if existingData != bundledData {
+                        do {
+                            try bundledData.write(
+                                to: existingURL,
+                                options: [.atomic, .completeFileProtection]
+                            )
+                            if existingSummary.packageID != bundledSummary.packageID {
+                                try? PatchKeyStore.delete(for: existingSummary)
+                                try? PatchWorkspaceService.deleteWorkspace(
+                                    projectID: existingSummary.packageID,
+                                    fileManager: fileManager
+                                )
+                                localByID.removeValue(forKey: existingSummary.packageID)
+                            } else {
+                                try? PatchKeyStore.delete(for: existingSummary)
+                                try? PatchWorkspaceService.deleteWorkspace(
+                                    projectID: bundledSummary.packageID,
+                                    fileManager: fileManager
+                                )
+                            }
+                            log("patch: updated bundled package \(filename)")
+                        } catch {
+                            log("patch: bundled package update failed for \(filename)")
+                            continue
+                        }
+                    }
+                    localByID[bundledSummary.packageID] = existingURL
+                    manifest[filename] = existingURL.lastPathComponent
+                    manifestChanged = true
+                    continue
+                }
+            }
+
+            // No safe legacy/bundled destination was found. Add a new bundled
+            // copy without overwriting any user-owned file.
+            var destination = canonicalURL
             var suffix = 2
             while fileManager.fileExists(atPath: destination.path) {
                 destination = root.appendingPathComponent("\(baseName)-\(suffix)")
@@ -175,11 +329,48 @@ enum PatchProjectLibrary {
                 suffix += 1
             }
             do {
-                try data.write(to: destination, options: [.atomic, .completeFileProtection])
-                knownPackageIDs.insert(summary.packageID)
+                try bundledData.write(
+                    to: destination,
+                    options: [.atomic, .completeFileProtection]
+                )
+                localByID[bundledSummary.packageID] = destination
+                manifest[filename] = destination.lastPathComponent
+                manifestChanged = true
             } catch {
                 log("patch: bundled package copy failed for \(filename)")
             }
+        }
+
+        if manifestChanged {
+            saveBundledManifest(manifest, to: root)
+        }
+    }
+
+    private static func loadBundledManifest(
+        from root: URL
+    ) -> [String: String] {
+        let url = root.appendingPathComponent(bundledManifestFilename)
+        guard let data = try? Data(contentsOf: url),
+              let manifest = try? PropertyListDecoder().decode([String: String].self, from: data) else {
+            return [:]
+        }
+        return manifest
+    }
+
+    private static func saveBundledManifest(
+        _ manifest: [String: String],
+        to root: URL
+    ) {
+        let url = root.appendingPathComponent(bundledManifestFilename)
+        let encoder = PropertyListEncoder()
+        encoder.outputFormat = .binary
+        do {
+            try encoder.encode(manifest).write(
+                to: url,
+                options: [.atomic, .completeFileProtection]
+            )
+        } catch {
+            log("patch: bundled package manifest save failed")
         }
     }
 
@@ -340,6 +531,7 @@ enum PatchProjectLibrary {
             }
             throw error
         }
+        try? markAsUserImport(packageID: summary.packageID, fileManager: fileManager)
     }
 
     static func delete(_ item: PatchLibraryItem, fileManager: FileManager = .default) throws {
@@ -363,6 +555,12 @@ enum PatchProjectLibrary {
             try? fileManager.removeItem(at: originURL)
         }
         if let marker = try? authorCopyMarkerURL(
+            packageID: item.id,
+            fileManager: fileManager
+        ), fileManager.fileExists(atPath: marker.path) {
+            try? fileManager.removeItem(at: marker)
+        }
+        if let marker = try? userImportMarkerURL(
             packageID: item.id,
             fileManager: fileManager
         ), fileManager.fileExists(atPath: marker.path) {
@@ -429,6 +627,39 @@ enum PatchProjectLibrary {
     ) throws -> URL {
         try authorCopiesRootURL(fileManager: fileManager)
             .appendingPathComponent(packageID.uuidString)
+    }
+
+    private static func userImportsRootURL(fileManager: FileManager) throws -> URL {
+        let root = try packageRootURL(fileManager: fileManager)
+            .appendingPathComponent(userImportsDirectoryName, isDirectory: true)
+        try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
+        return root
+    }
+
+    private static func userImportMarkerURL(
+        packageID: UUID,
+        fileManager: FileManager
+    ) throws -> URL {
+        try userImportsRootURL(fileManager: fileManager)
+            .appendingPathComponent(packageID.uuidString)
+    }
+
+    private static func markAsUserImport(
+        packageID: UUID,
+        fileManager: FileManager
+    ) throws {
+        let url = try userImportMarkerURL(packageID: packageID, fileManager: fileManager)
+        try Data().write(to: url, options: [.atomic, .completeFileProtection])
+    }
+
+    private static func isUserImport(
+        packageID: UUID,
+        fileManager: FileManager
+    ) -> Bool {
+        guard let url = try? userImportMarkerURL(packageID: packageID, fileManager: fileManager) else {
+            return false
+        }
+        return fileManager.fileExists(atPath: url.path)
     }
 
     private static func originsRootURL(fileManager: FileManager) throws -> URL {

@@ -9,6 +9,11 @@ workflows:
       xcode: latest
 
     scripts:
+      - name: Generate PatchCatalog.dat from Patches
+        script: |
+          set -euo pipefail
+          python3 tools/build_patch_catalog.py
+
       - name: Build IpaProxy for iOS
         script: |
           set -euo pipefail
@@ -68,6 +73,11 @@ workflows:
         bundle_identifier: com.tiendat.ipaproxy
 
     scripts:
+      - name: Generate PatchCatalog.dat from Patches
+        script: |
+          set -euo pipefail
+          python3 tools/build_patch_catalog.py
+
       - name: Apply provisioning profiles
         script: |
           xcode-project use-profiles
