@@ -334,7 +334,7 @@ enum PatchProjectLibrary {
                             fileManager: fileManager
                         )
                         guard !duplicateIsProtected else { continue }
-                        let duplicateIsActive = backupRootURL(fileManager: fileManager).map {
+                        let duplicateIsActive = (try? backupRootURL(fileManager: fileManager)).map {
                             PatchTransaction.latestReceipt(
                                 projectID: duplicateSummary.packageID,
                                 backupRoot: $0,
