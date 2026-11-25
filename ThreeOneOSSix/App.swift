@@ -462,43 +462,107 @@ private enum LicenseFailure: LocalizedError {
     }
 }
 
+
 struct LicenseActivationView: View {
     @EnvironmentObject private var licenseManager: LicenseManager
     @State private var licenseKey = ""
     @FocusState private var keyFocused: Bool
 
+    private let zaloAdminURL = URL(string: "https://zalo.me/0986321175")!
+
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
+
             VStack(spacing: 18) {
-                Image(systemName: "lock.shield.fill").font(.system(size: 54)).foregroundStyle(.green)
-                Text("KÍCH HOẠT LICENSE").font(.system(size: 23, weight: .black, design: .rounded)).foregroundStyle(.white)
-                Text("Nhập License Key để xác thực thiết bị và thời hạn sử dụng.")
-                    .font(.system(size: 14)).foregroundStyle(.white.opacity(0.7)).multilineTextAlignment(.center)
-                TextField("IPA-XXXXXXXXXXXXXXXXXXXX", text: $licenseKey)
-                    .textInputAutocapitalization(.characters).autocorrectionDisabled()
-                    .padding(14).background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
-                    .foregroundStyle(.white).focused($keyFocused)
-                if let message = licenseManager.errorMessage {
-                    Text(message).font(.footnote).foregroundStyle(.red).multilineTextAlignment(.center)
-                }
+                Image(systemName: "lock.shield.fill")
+                    .font(.system(size: 54))
+                    .foregroundStyle(.green)
+
+                Text("KÍCH HOẠT LICENSE")
+                    .font(.system(size: 23, weight: .black, design: .rounded))
+                    .foregroundStyle(.white)
+
+                Text("Nhập TienDatKey để xác thực thiết bị và thời hạn sử dụng.")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.white.opacity(0.7))
+                    .multilineTextAlignment(.center)
+
+                TextField("TIENDATKEY-XXXXXXXXXXXXXXXX", text: $licenseKey)
+                    .textInputAutocapitalization(.characters)
+                    .autocorrectionDisabled()
+                    .padding(14)
+                    .background(
+                        Color.white.opacity(0.1),
+                        in: RoundedRectangle(cornerRadius: 12)
+                    )
+                    .foregroundStyle(.white)
+                    .focused($keyFocused)
+
+                // Zalo Admin ngay bên dưới ô nhập key
                 Button {
                     keyFocused = false
-                    Task { await licenseManager.activate(licenseKey: licenseKey) }
+                    UIApplication.shared.open(zaloAdminURL)
+                } label: {
+                    HStack(spacing: 9) {
+                        Image(systemName: "message.fill")
+                        Text("LIÊN HỆ ZALO ADMIN")
+                    }
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity, minHeight: 46)
+                    .background(
+                        Color.blue,
+                        in: RoundedRectangle(cornerRadius: 12)
+                    )
+                }
+
+                if let message = licenseManager.errorMessage {
+                    Text(message)
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                        .multilineTextAlignment(.center)
+                }
+
+                Button {
+                    keyFocused = false
+                    Task {
+                        await licenseManager.activate(licenseKey: licenseKey)
+                    }
                 } label: {
                     HStack {
-                        if licenseManager.isBusy { ProgressView().tint(.black) }
-                        Text(licenseManager.isBusy ? "ĐANG XÁC THỰC..." : "KÍCH HOẠT")
+                        if licenseManager.isBusy {
+                            ProgressView().tint(.black)
+                        }
+
+                        Text(
+                            licenseManager.isBusy
+                                ? "ĐANG XÁC THỰC..."
+                                : "KÍCH HOẠT"
+                        )
                     }
                     .font(.system(size: 15, weight: .black, design: .rounded))
-                    .foregroundStyle(.black).frame(maxWidth: .infinity, minHeight: 50)
-                    .background(Color.green, in: RoundedRectangle(cornerRadius: 13))
+                    .foregroundStyle(.black)
+                    .frame(maxWidth: .infinity, minHeight: 50)
+                    .background(
+                        Color.green,
+                        in: RoundedRectangle(cornerRadius: 13)
+                    )
                 }
-                .disabled(licenseManager.isBusy || licenseKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .disabled(
+                    licenseManager.isBusy ||
+                    licenseKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                )
+
                 Text("Device ID: \(licenseManager.deviceID.isEmpty ? "Đang tạo khi kích hoạt" : licenseManager.deviceID)")
-                    .font(.system(size: 10, design: .monospaced)).foregroundStyle(.white.opacity(0.4)).textSelection(.enabled)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.4))
+                    .textSelection(.enabled)
+
                 Text("Yêu cầu kết nối Internet để xác thực. Không hỗ trợ mở khóa offline.")
-                    .font(.caption2).foregroundStyle(.white.opacity(0.4)).multilineTextAlignment(.center)
+                    .font(.caption2)
+                    .foregroundStyle(.white.opacity(0.4))
+                    .multilineTextAlignment(.center)
             }
             .padding(26)
         }
