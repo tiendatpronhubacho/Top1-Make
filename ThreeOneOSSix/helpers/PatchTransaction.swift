@@ -314,6 +314,9 @@ enum PatchTransaction {
                 )
                 if parentGrant >= 0 { targetGrants.append(parentGrant) }
                 if let backupCenter {
+                    let expectedSHA256 = records[index].replacementDigest
+                        .map { String(format: "%02x", Int($0)) }
+                        .joined()
                     try VerifiedFileWriter.write(
                         resolved.rule.replacementData,
                         to: resolved.target,
@@ -321,9 +324,7 @@ enum PatchTransaction {
                         reason: "patch \(project.name)/\(resolved.rule.relativePath)",
                         containerPath: roots[resolved.rule.bundleID]?.path,
                         bundleID: resolved.rule.bundleID,
-                        expectedSHA256: records[index].replacementDigest.map {
-    String(format: "%02x", $0)
-}.joined()
+                        expectedSHA256: expectedSHA256,
                         center: backupCenter
                     )
                 } else {
