@@ -910,7 +910,7 @@
 				);
 				MARKETING_VERSION = 3.2.8;
 				OTHER_LDFLAGS = "-lz";
-				PRODUCT_BUNDLE_IDENTIFIER = com.qingtang.3106;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tiendat.ipaproxy;
 				PRODUCT_NAME = IpaProxy;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OBJC_BRIDGING_HEADER = "ThreeOneOSSix/ThreeOneOSSix-Bridging-Header.h";
@@ -944,7 +944,7 @@
 				);
 				MARKETING_VERSION = 3.2.8;
 				OTHER_LDFLAGS = "-lz";
-				PRODUCT_BUNDLE_IDENTIFIER = com.qingtang.3106;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tiendat.ipaproxy;
 				PRODUCT_NAME = IpaProxy;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OBJC_BRIDGING_HEADER = "ThreeOneOSSix/ThreeOneOSSix-Bridging-Header.h";
