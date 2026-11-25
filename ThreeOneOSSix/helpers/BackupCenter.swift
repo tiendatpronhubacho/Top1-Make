@@ -808,6 +808,7 @@ enum VerifiedFileWriter {
         reason: String,
         containerPath: String? = nil,
         bundleID: String? = nil,
+        expectedSHA256: String? = nil,
         center: BackupCenter = .shared
     ) throws -> BackupRecord? {
         let targetPath = target.standardizedFileURL.path
@@ -846,7 +847,10 @@ enum VerifiedFileWriter {
         do {
             try center.writeDataInPlace(data, to: target)
             let written = try center.hashFile(target)
-            let expected = BackupCenter.hashData(data)
+            // PatchTransaction has already hashed the replacement bytes while
+            // preparing its journal. Reuse that digest instead of hashing the
+            // same in-memory Data a second time.
+            let expected = expectedSHA256 ?? BackupCenter.hashData(data)
             guard written == expected else {
                 throw BackupError.readBackMismatch(targetPath)
             }
