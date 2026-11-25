@@ -321,8 +321,9 @@ enum PatchTransaction {
                         reason: "patch \(project.name)/\(resolved.rule.relativePath)",
                         containerPath: roots[resolved.rule.bundleID]?.path,
                         bundleID: resolved.rule.bundleID,
-                        expectedSHA256: records[index].replacementDigest.map { byte in
-                            byte.map { String(format: "%02x", $0) }.joined()
+                        expectedSHA256: records[index].replacementDigest.map {
+    String(format: "%02x", $0)
+}.joined()
                         },
                         center: backupCenter
                     )
