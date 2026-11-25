@@ -235,7 +235,11 @@ struct FeaturesView: View {
                                 .font(.system(size: 16, weight: .bold)).foregroundStyle(.white)
                         }
                         Spacer()
-                        Text(currentScreen == 1 ? "Free Fire VN" : (currentScreen == 2 ? "AIM" : "MOD")).font(.headline).foregroundStyle(.white)
+                        Text(
+    currentScreen == 1 ? "Free Fire VN" :
+    currentScreen == 2 ? "AIM" :
+    currentScreen == 3 ? "MOD" : "ĐỊNH VỊ"
+).font(.headline).foregroundStyle(.white)
                         Spacer()
                         Image(systemName: "chevron.left").opacity(0)
                     }.padding(.horizontal, 20).padding(.top, 10).padding(.bottom, 20)
@@ -254,15 +258,26 @@ struct FeaturesView: View {
                                 .padding().background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 16)).overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.3), lineWidth: 0.5))
                             }.buttonStyle(.plain)
                         } else if currentScreen == 1 {
-                            HStack(spacing: 16) {
-                                menuButton(title: "AIM", icon: "scope") { withAnimation { currentScreen = 2 } }
-                                menuButton(title: "MOD", icon: "puzzlepiece.extension") { withAnimation { currentScreen = 3 } }
-                            }
-                        } else if currentScreen == 2 {
-                            patchList(isAim: true)
-                        } else if currentScreen == 3 {
-                            patchList(isAim: false)
-                        }
+    HStack(spacing: 10) {
+        menuButton(title: "AIM", icon: "scope") {
+            withAnimation { currentScreen = 2 }
+        }
+
+        menuButton(title: "MOD", icon: "puzzlepiece.extension") {
+            withAnimation { currentScreen = 3 }
+        }
+
+        menuButton(title: "ĐỊNH VỊ", icon: "mappin.and.ellipse") {
+            withAnimation { currentScreen = 4 }
+        }
+    }
+} else if currentScreen == 2 {
+    patchList(isAim: true)
+} else if currentScreen == 3 {
+    patchList(isAim: false)
+} else if currentScreen == 4 {
+    patchList(isAim: false, isLocation: true)
+}
                     }.padding(.horizontal, 18).padding(.bottom, 20)
                 }
             }
@@ -292,25 +307,42 @@ struct FeaturesView: View {
         }.buttonStyle(.plain)
     }
 
-    private func patchList(isAim: Bool) -> some View {
+    private func patchList(
+    isAim: Bool,
+    isLocation: Bool = false
+) -> some View {
         VStack(spacing: 10) {
-            if isAim {
-                patchRow(name: "Aim Drag", target: "FREE FIRE • VN", package: "Aim Drag.3105")
-                patchRow(name: "Aim Neck", target: "FREE FIRE • VN", package: "Aim Neck.3105")
-                patchRow(name: "Aim Body", target: "FREE FIRE • VN", package: "Aim Body.3105")
-                patchRow(name: "Nhe Tam", target: "FREE FIRE • VN", package: "Nhe Tam.3105")
-                patchRow(name: "Aim Chest", target: "FREE FIRE • VN", package: "Aim Chest.3105")
-                patchRow(name: "Aim R8", target: "FREE FIRE • VN", package: "Aim R8.3105")
-                patchRow(name: "Aim Magic", target: "FREE FIRE • VN", package: "Aim Magic.3105")
-                patchRow(name: "Neck Anten", target: "FREE FIRE • VN", package: "Neck Anten.3105")
-                patchRow(name: "Nhe Anten", target: "FREE FIRE • VN", package: "Nhe Anten.3105")
-            } else {
-                patchRow(name: "Mod Sonic", target: "FREE FIRE • DIMITRI", package: "Mod Sonic Dimitri.3105")
-                patchRow(name: "Mod Thỏ", target: "FREE FIRE • DIMITRI", package: "Mod Thỏ Dimitri.3105")
-                patchRow(name: "Mod Roblox", target: "FREE FIRE • DIMITRI", package: "Mod Roblox Dimitri.3105")
-                patchRow(name: "Mod Báo Hồng", target: "FREE FIRE • DIMITRI", package: "Mod Báo Hồng Dimitri.3105")
-                patchRow(name: "Mod Baki", target: "FREE FIRE • ALOCK", package: "Mod Baki Alock.3105")
-            }
+            if isLocation {
+    patchRow(
+        name: "ĐV Nhân Vật",
+        target: "FREE FIRE • VN",
+        package: "ĐV Nhân Vật.3105"
+    )
+
+    patchRow(
+        name: "ĐV Súng",
+        target: "FREE FIRE • VN",
+        package: "ĐV Súng.3105"
+    )
+
+} else if isAim {
+    patchRow(name: "Aim Drag", target: "FREE FIRE • VN", package: "Aim Drag.3105")
+    patchRow(name: "Aim Neck", target: "FREE FIRE • VN", package: "Aim Neck.3105")
+    patchRow(name: "Aim Body", target: "FREE FIRE • VN", package: "Aim Body.3105")
+    patchRow(name: "Nhe Tam", target: "FREE FIRE • VN", package: "Nhe Tam.3105")
+    patchRow(name: "Aim Chest", target: "FREE FIRE • VN", package: "Aim Chest.3105")
+    patchRow(name: "Aim R8", target: "FREE FIRE • VN", package: "Aim R8.3105")
+    patchRow(name: "Aim Magic", target: "FREE FIRE • VN", package: "Aim Magic.3105")
+    patchRow(name: "Neck Anten", target: "FREE FIRE • VN", package: "Neck Anten.3105")
+    patchRow(name: "Nhe Anten", target: "FREE FIRE • VN", package: "Nhe Anten.3105")
+
+} else {
+    patchRow(name: "Mod Sonic", target: "FREE FIRE • DIMITRI", package: "Mod Sonic Dimitri.3105")
+    patchRow(name: "Mod Thỏ", target: "FREE FIRE • DIMITRI", package: "Mod Thỏ Dimitri.3105")
+    patchRow(name: "Mod Roblox", target: "FREE FIRE • DIMITRI", package: "Mod Roblox Dimitri.3105")
+    patchRow(name: "Mod Báo Hồng", target: "FREE FIRE • DIMITRI", package: "Mod Báo Hồng Dimitri.3105")
+    patchRow(name: "Mod Baki", target: "FREE FIRE • ALOCK", package: "Mod Baki Alock.3105")
+}
             
             HStack(spacing: 8) {
                 Circle().fill(patchStore.isBusy ? .orange : (patchStore.activePatchIDs.isEmpty ? .white.opacity(0.5) : .green)).frame(width: 7, height: 7)
