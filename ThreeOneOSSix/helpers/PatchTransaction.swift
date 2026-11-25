@@ -324,7 +324,6 @@ enum PatchTransaction {
                         expectedSHA256: records[index].replacementDigest.map {
     String(format: "%02x", $0)
 }.joined()
-                        },
                         center: backupCenter
                     )
                 } else {
