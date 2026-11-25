@@ -67,9 +67,9 @@ final class PatchProjectStore: ObservableObject {
             "Nhe Tam.3105", "Aim Chest.3105", "Aim R8.3105",
             "Aim Magic.3105", "Neck Anten.3105", "Nhe Anten.3105",
             "Mod Sonic Dimitri.3105", "Mod Thỏ Dimitri.3105", "Mod Roblox Dimitri.3105",
-            "Mod Báo Hồng Dimitri.3105", "Mod Baki Alock.3105"
+            "Mod Báo Hồng Dimitri.3105", "Mod Baki Alock.3105",
             "ĐV Nhân Vật.3105",
-"ĐV Súng.3105",
+"ĐV Súng.3105"
         ]
     }
 
