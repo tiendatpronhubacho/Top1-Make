@@ -8,8 +8,13 @@ enum PatchPackageCodec {
     // the on-disk package format. Renaming them would make every existing
     // .3105/.3106 package undecryptable, so only the app identity changes.
     private static let magic = Data("3105PATCH\0".utf8)
+    // Keep writing the stable v3 format, but accept the v9 envelope used by
+    // the bundled Aim packages. Its payload layout and AAD scheme remain
+    // compatible with this decoder; rejecting it here made valid packages
+    // disappear from the Patch Library before they could be decoded.
     static let latestSchemaVersion = 3
     private static let minimumSchemaVersion = 1
+    private static let maximumSupportedSchemaVersion = 9
 
     private struct Envelope: Codable {
         let schemaVersion: Int
@@ -210,7 +215,7 @@ enum PatchPackageCodec {
         }
         try validate(project)
         let schemaVersion = requestedSchemaVersion ?? oldEnvelope.schemaVersion
-        guard (minimumSchemaVersion...latestSchemaVersion).contains(schemaVersion) else {
+        guard (minimumSchemaVersion...maximumSupportedSchemaVersion).contains(schemaVersion) else {
             throw PatchPackageError.unsupportedVersion
         }
         guard !project.isPrivate || oldEnvelope.isPasswordProtected else {
@@ -382,7 +387,7 @@ enum PatchPackageCodec {
         } catch {
             throw PatchPackageError.invalidPasswordOrCorruptedPackage
         }
-        guard (minimumSchemaVersion...latestSchemaVersion).contains(envelope.schemaVersion) else {
+        guard (minimumSchemaVersion...maximumSupportedSchemaVersion).contains(envelope.schemaVersion) else {
             throw PatchPackageError.unsupportedVersion
         }
         guard envelope.keyFingerprint.count == 32,
@@ -392,7 +397,7 @@ enum PatchPackageCodec {
         }
         if envelope.isPasswordProtected {
             guard envelope.publicContentKey == nil,
-                  (minimumSchemaVersion...latestSchemaVersion).contains(
+                  (minimumSchemaVersion...maximumSupportedSchemaVersion).contains(
                     envelope.keyAADVersion ?? envelope.schemaVersion
                   ),
                   envelope.kdfSalt?.count == 16,
