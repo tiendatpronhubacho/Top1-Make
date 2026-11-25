@@ -104,6 +104,7 @@ enum PatchTransaction {
         fileManager: FileManager = .default,
         backupCenter: BackupCenter? = nil
     ) throws -> PatchTransactionReceipt {
+        let applyStarted = ProcessInfo.processInfo.systemUptime
         guard !project.rules.isEmpty || !project.directories.isEmpty else {
             throw PatchPackageError.invalidProject
         }
@@ -223,8 +224,10 @@ enum PatchTransaction {
                 containerFingerprint: containerFingerprint(resolved.containerRoot)
             )
         }
+        let backupPreparationStarted = ProcessInfo.processInfo.systemUptime
         do {
             for resolved in resolvedRules {
+                let itemStarted = ProcessInfo.processInfo.systemUptime
                 let existed = fileManager.fileExists(atPath: resolved.target.path)
                 let backupFilename = existed ? "\(resolved.rule.id.uuidString).original" : nil
                 let appliedFilename = project.isPrivate
@@ -244,6 +247,10 @@ enum PatchTransaction {
                         throw PatchPackageError.applyFailed
                     }
                 }
+                log(String(format: "patch-timing prepare-file %@ %.3fs (%lld bytes)",
+                           resolved.rule.relativePath,
+                           ProcessInfo.processInfo.systemUptime - itemStarted,
+                           Int64(resolved.rule.replacementData.count)))
                 records.append(Record(
                     ruleID: resolved.rule.id,
                     bundleID: resolved.rule.bundleID,
@@ -256,6 +263,8 @@ enum PatchTransaction {
                     appliedFilename: appliedFilename
                 ))
             }
+            log(String(format: "patch-timing backup-preparation-total %.3fs",
+                       ProcessInfo.processInfo.systemUptime - backupPreparationStarted))
         } catch let error as PatchPackageError {
             throw error
         } catch {
@@ -283,6 +292,7 @@ enum PatchTransaction {
             for grant in targetGrants { SandboxAccess.release(grant) }
         }
 
+        let writePhaseStarted = ProcessInfo.processInfo.systemUptime
         do {
             for resolved in resolvedDirectories where !fileManager.fileExists(atPath: resolved.target.path) {
                 // The container-root grant is not always enough to create or
@@ -297,6 +307,7 @@ enum PatchTransaction {
                 )
             }
             for (index, resolved) in resolvedRules.enumerated() {
+                let itemStarted = ProcessInfo.processInfo.systemUptime
                 try beforeWrite?(index)
                 let parentGrant = ContainerStore.grantContainerAccess(
                     resolved.target.deletingLastPathComponent().path
@@ -310,6 +321,9 @@ enum PatchTransaction {
                         reason: "patch \(project.name)/\(resolved.rule.relativePath)",
                         containerPath: roots[resolved.rule.bundleID]?.path,
                         bundleID: resolved.rule.bundleID,
+                        expectedSHA256: records[index].replacementDigest.map { byte in
+                            byte.map { String(format: "%02x", $0) }.joined()
+                        },
                         center: backupCenter
                     )
                 } else {
@@ -320,12 +334,24 @@ enum PatchTransaction {
                         fileManager: fileManager
                     )
                 }
-                guard try digestFile(resolved.target) == records[index].replacementDigest else {
+                // VerifiedFileWriter already reads the destination back and
+                // verifies it against this transaction's precomputed digest.
+                // Avoid a second full-file read on the BackupCenter path.
+                if backupCenter == nil,
+                   try digestFile(resolved.target) != records[index].replacementDigest {
                     throw PatchPackageError.applyFailed
                 }
+                log(String(format: "patch-timing write-file %@ %.3fs",
+                           resolved.rule.relativePath,
+                           ProcessInfo.processInfo.systemUptime - itemStarted))
             }
+            log(String(format: "patch-timing write-phase-total %.3fs",
+                       ProcessInfo.processInfo.systemUptime - writePhaseStarted))
             journal.status = .applied
             try writeJournal(journal, to: journalURL)
+            log(String(format: "patch-timing apply-total %.3fs files=%d",
+                       ProcessInfo.processInfo.systemUptime - applyStarted,
+                       resolvedRules.count))
             return PatchTransactionReceipt(
                 id: transactionID,
                 projectID: project.id,
