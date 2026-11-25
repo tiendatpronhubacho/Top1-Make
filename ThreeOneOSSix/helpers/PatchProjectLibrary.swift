@@ -244,7 +244,8 @@ enum PatchProjectLibrary {
 
             if let existingURL,
                let existingData = try? readPackage(at: existingURL),
-               let existingSummary = try? PatchPackageCodec.inspect(existingData) {
+               let existingSummary = try? PatchPackageCodec.inspect(existingData),
+               existingSummary.packageID == bundledSummary.packageID {
                 // Never replace an author copy or a package imported from a
                 // repository. The marker is checked against the old ID because
                 // a bundled replacement can carry a different ID.

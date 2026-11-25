@@ -6,8 +6,8 @@ enum ExploitSupportPolicy {
 
     /// The iOS 18 release that closed the kernel exploit window.
     ///
-    /// Apple fixed CVE-2025-43510 and CVE-2025-43520 — the bugs this project's
-    /// kernel chain (DarkSword lineage) depends on — in iOS 18.7.2. Every
+    /// Apple fixed CVE-2025-43510 and CVE-2025-43520 -- the bugs this project's
+    /// kernel chain (DarkSword lineage) depends on -- in iOS 18.7.2. Every
     /// later 18.x build is therefore unsupported by design, not by an
     /// oversight in the version table. Kept as a constant so the explanation
     /// shown to users cannot drift from the boundary enforced above.
@@ -16,7 +16,7 @@ enum ExploitSupportPolicy {
     static let verifiedIOS26WorseQueryRange = "26.7–26.7.2"
 
     /// Every 27.0–27.2 build is accepted unconditionally, so the range must
-    /// stop at the minor version — writing "27.2.1" here would claim a patch
+    /// stop at the minor version -- writing "27.2.1" here would claim a patch
     /// boundary that `supportsWorseQuery` does not enforce.
     static let verifiedIOS27Range = "27.0–27.2"
 
@@ -32,6 +32,9 @@ enum ExploitSupportPolicy {
         isA10: Bool = false
     ) -> Bool {
         guard minor >= 0, patch >= 0 else { return false }
+
+        // Hỗ trợ iOS 16
+        if major == 16 { return true }
 
         // A10 Fusion hangs inside the kernel chain on iOS 17. Refusing costs a
         // device that otherwise looks supported one capability; running it
@@ -60,13 +63,13 @@ enum ExploitSupportPolicy {
     ///
     /// The upstream 3105 line gated every 27.x build through a table like this.
     /// 3106 replaced it with a bare `minor <= 3`, which let 27.3 beta 2 and
-    /// later through even though Apple patched worse_query there — WQ Files
+    /// later through even though Apple patched worse_query there -- WQ Files
     /// reports the patch landing in 27.3 beta 2 (24C5049d) and recommends
     /// staying on beta 1 (24C5037i). A version range alone cannot express
     /// "this specific build was verified"; an unlisted build must be refused,
     /// otherwise the UI shows "activated" while every grant fails.
     static let verifiedIOS27Builds: [String] = [
-        "24C5037i"   // iOS 27.3 beta 1 — operator-verified on hardware
+        "24C5037i"   // iOS 27.3 beta 1 -- operator-verified on hardware
     ]
 
     /// worse_query targets iOS 26.0–26.7.2 and 27.0–27.2 unconditionally.
@@ -161,7 +164,7 @@ enum RejectionReason {
         if supported { return nil }
 
         // A10 + iOS 17 is refused by chip, not by OS version. Without its own
-        // branch the user would read "unsupported: iOS 17.7.9 (21H…)" — which
+        // branch the user would read "unsupported: iOS 17.7.9 (21H…)" -- which
         // implies the OS is too new when the OS is in fact supported on every
         // other chip. The action is different too: stay put, don't update.
         if isA10 && major == 17 {

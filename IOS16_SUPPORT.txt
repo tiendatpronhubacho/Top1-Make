@@ -1,0 +1,9 @@
+IpaProxy iOS 16 deployment configuration
+
+- Xcode project deployment target: iOS 16.0 in all app build configurations.
+- Info.plist MinimumOSVersion: 16.0.
+- Unsigned Codemagic xcodebuild explicitly passes IPHONEOS_DEPLOYMENT_TARGET=16.0.
+- Signed Codemagic workflow uses the Xcode project deployment target (16.0).
+- iOS 18-only code paths identified in PatchProjectsView.swift and RepositoryMarketplaceView.swift are guarded with #available(iOS 18.0, *).
+
+This documents deployment configuration and source-level availability checks. It is not a successful Xcode build or device test, and does not guarantee that kernel/backend features work on iOS 16. Those features depend on device, jailbreak/kernel environment, and runtime support.
