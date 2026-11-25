@@ -133,9 +133,9 @@ enum PatchProjectLibrary {
     }
 
     /// Synchronizes packages shipped in PatchCatalog.dat into the local library.
-    /// Bundled packages are updated by catalog filename, because a replacement
-    /// package may intentionally have a new packageID. User imports and active
-    /// patches are left untouched.
+    /// Bundled system packages are updated in place by catalog filename, even
+    /// when a replacement has a new packageID. User imports, author copies, and
+    /// active patches are left untouched; active updates are retried on a later load.
     private static func seedBundledPackages(
         into root: URL,
         fileManager: FileManager
@@ -244,8 +244,7 @@ enum PatchProjectLibrary {
 
             if let existingURL,
                let existingData = try? readPackage(at: existingURL),
-               let existingSummary = try? PatchPackageCodec.inspect(existingData),
-               existingSummary.packageID == bundledSummary.packageID {
+               let existingSummary = try? PatchPackageCodec.inspect(existingData) {
                 // Never replace an author copy or a package imported from a
                 // repository. The marker is checked against the old ID because
                 // a bundled replacement can carry a different ID.
@@ -293,19 +292,18 @@ enum PatchProjectLibrary {
                                 to: existingURL,
                                 options: [.atomic, .completeFileProtection]
                             )
+                            // A bundled system patch is identified by its catalog
+                            // filename, not by packageID. Replacing it in place
+                            // prevents stale system copies from accumulating as -2/-3.
+                            // Remove state belonging to the old package identity only
+                            // after the new payload has been written successfully.
+                            try? PatchKeyStore.delete(for: existingSummary)
+                            try? PatchWorkspaceService.deleteWorkspace(
+                                projectID: existingSummary.packageID,
+                                fileManager: fileManager
+                            )
                             if existingSummary.packageID != bundledSummary.packageID {
-                                try? PatchKeyStore.delete(for: existingSummary)
-                                try? PatchWorkspaceService.deleteWorkspace(
-                                    projectID: existingSummary.packageID,
-                                    fileManager: fileManager
-                                )
                                 localByID.removeValue(forKey: existingSummary.packageID)
-                            } else {
-                                try? PatchKeyStore.delete(for: existingSummary)
-                                try? PatchWorkspaceService.deleteWorkspace(
-                                    projectID: bundledSummary.packageID,
-                                    fileManager: fileManager
-                                )
                             }
                             log("patch: updated bundled package \(filename)")
                         } catch {
@@ -313,6 +311,47 @@ enum PatchProjectLibrary {
                             continue
                         }
                     }
+                    // Remove older duplicate bundled copies created by previous
+                    // versions' suffix allocator. Only numeric suffix siblings are
+                    // considered, and user-owned or active packages are preserved.
+                    for duplicateURL in localURLs where
+                        duplicateURL.standardizedFileURL != existingURL.standardizedFileURL &&
+                        duplicateURL.pathExtension.lowercased() == ext {
+                        let duplicateStem = duplicateURL.deletingPathExtension().lastPathComponent
+                        let isNumericSibling = duplicateStem.hasPrefix(baseName + "-") &&
+                            Int(duplicateStem.dropFirst(baseName.count + 1)) != nil
+                        guard isNumericSibling,
+                              let duplicateData = try? readPackage(at: duplicateURL),
+                              let duplicateSummary = try? PatchPackageCodec.inspect(duplicateData) else { continue }
+                        let duplicateIsProtected = isAuthorCopy(
+                            packageID: duplicateSummary.packageID,
+                            fileManager: fileManager
+                        ) || loadOrigin(
+                            packageID: duplicateSummary.packageID,
+                            fileManager: fileManager
+                        ) != nil || isUserImport(
+                            packageID: duplicateSummary.packageID,
+                            fileManager: fileManager
+                        )
+                        guard !duplicateIsProtected else { continue }
+                        let duplicateIsActive = backupRootURL(fileManager: fileManager).map {
+                            PatchTransaction.latestReceipt(
+                                projectID: duplicateSummary.packageID,
+                                backupRoot: $0,
+                                fileManager: fileManager
+                            ) != nil
+                        } ?? false
+                        guard !duplicateIsActive else { continue }
+                        try? fileManager.removeItem(at: duplicateURL)
+                        try? PatchKeyStore.delete(for: duplicateSummary)
+                        try? PatchWorkspaceService.deleteWorkspace(
+                            projectID: duplicateSummary.packageID,
+                            fileManager: fileManager
+                        )
+                        localByID.removeValue(forKey: duplicateSummary.packageID)
+                        log("patch: removed stale bundled duplicate \(duplicateURL.lastPathComponent)")
+                    }
+
                     localByID[bundledSummary.packageID] = existingURL
                     manifest[filename] = existingURL.lastPathComponent
                     manifestChanged = true

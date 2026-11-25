@@ -319,8 +319,46 @@ struct FeaturesView: View {
         }
     }
 
+    /// Resolve the catalog package even when Project Library had to preserve an
+    /// older/user-owned file at the canonical name and seed the bundled copy as
+    /// "Name-2.3105" (or a later suffix).
+    private func bundledPatchItem(named package: String) -> PatchLibraryItem? {
+        let requestedURL = URL(fileURLWithPath: package)
+        let requestedExtension = requestedURL.pathExtension
+        let requestedStem = requestedURL.deletingPathExtension().lastPathComponent
+            .precomposedStringWithCanonicalMapping
+
+        let candidates = patchStore.items.filter { item in
+            guard item.packageURL.pathExtension.caseInsensitiveCompare(requestedExtension) == .orderedSame else {
+                return false
+            }
+            let stem = item.packageURL.deletingPathExtension().lastPathComponent
+                .precomposedStringWithCanonicalMapping
+            if stem.caseInsensitiveCompare(requestedStem) == .orderedSame {
+                return true
+            }
+            guard stem.count > requestedStem.count,
+                  stem.lowercased().hasPrefix(requestedStem.lowercased() + "-") else {
+                return false
+            }
+            let suffix = stem.dropFirst(requestedStem.count + 1)
+            return !suffix.isEmpty && suffix.allSatisfy(\.isNumber)
+        }
+
+        // Prefer the suffixed bundled copy over a preserved legacy/imported
+        // package occupying the canonical filename.
+        return candidates.sorted { lhs, rhs in
+            let leftExact = lhs.packageURL.deletingPathExtension().lastPathComponent
+                .precomposedStringWithCanonicalMapping.caseInsensitiveCompare(requestedStem) == .orderedSame
+            let rightExact = rhs.packageURL.deletingPathExtension().lastPathComponent
+                .precomposedStringWithCanonicalMapping.caseInsensitiveCompare(requestedStem) == .orderedSame
+            if leftExact != rightExact { return !leftExact }
+            return lhs.packageURL.lastPathComponent.localizedStandardCompare(rhs.packageURL.lastPathComponent) == .orderedAscending
+        }.first
+    }
+
     private func patchRow(name: String, target: String, package: String) -> some View {
-        let item = patchStore.items.first(where: { $0.packageURL.lastPathComponent.caseInsensitiveCompare(package) == .orderedSame })
+        let item = bundledPatchItem(named: package)
         let isEnabled = item.flatMap { patchStore.activePatchIDs.contains($0.id) } ?? false
         
         return HStack(spacing: 12) {
