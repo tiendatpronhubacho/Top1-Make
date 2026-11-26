@@ -192,17 +192,23 @@ final class PatchProjectStore: ObservableObject {
     func applyAdminPatch(_ patch: AdminPatch) {
         guard !isBusy else { return }
 
-        if let cachedItem = items.first(where: { $0.id == patch.id }) {
-            applyPatch(cachedItem)
-            return
-        }
-
         guard let metadata = workerPatchesByID[patch.id] else {
             alert = PatchStoreAlert(
                 titleKey: "common.failed",
                 messageKey: "patch.apply_failed"
             )
             return
+        }
+
+        if let cachedItem = items.first(where: { $0.id == patch.id }),
+           let cachedData = try? Data(contentsOf: cachedItem.packageURL) {
+            let cachedHash = SHA256.hash(data: cachedData)
+                .map { String(format: "%02x", $0) }.joined()
+            if cachedHash.caseInsensitiveCompare(metadata.sha256) == .orderedSame,
+               (try? PatchPackageCodec.inspect(cachedData)) != nil {
+                applyPatch(cachedItem)
+                return
+            }
         }
 
         isBusy = true
