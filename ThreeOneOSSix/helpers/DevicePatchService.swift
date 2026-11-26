@@ -1,22 +1,31 @@
 import Foundation
 
 enum DevicePatchService {
-    static func apply(project: PatchProject) throws -> PatchTransactionReceipt {
-        let bundleIDs = orderedBundleIdentifiers(in: project)
-        return try withResolvedContainers(bundleIDs: bundleIDs) { roots in
-            try PatchTransaction.apply(
-                project: project,
-                backupRoot: try PatchProjectLibrary.backupRootURL(),
-                containerResolver: { bundleID in
-                    guard let root = roots[bundleID] else {
-                        throw PatchPackageError.targetAppUnavailable(bundleID)
-                    }
-                    return root
-                },
-                backupCenter: .shared
-            )
-        }
+    @MainActor
+static func apply(
+    project: PatchProject,
+    licenseManager: LicenseManager
+) async throws -> PatchTransactionReceipt {
+
+    // Xác thực License trên máy chủ trước khi ghi Patch.
+    try await licenseManager.authorizePatch(action: "patch_apply")
+
+    let bundleIDs = orderedBundleIdentifiers(in: project)
+
+    return try withResolvedContainers(bundleIDs: bundleIDs) { roots in
+        try PatchTransaction.apply(
+            project: project,
+            backupRoot: try PatchProjectLibrary.backupRootURL(),
+            containerResolver: { bundleID in
+                guard let root = roots[bundleID] else {
+                    throw PatchPackageError.targetAppUnavailable(bundleID)
+                }
+                return root
+            },
+            backupCenter: .shared
+        )
     }
+}
 
     static func inspectRestore(receipt: PatchTransactionReceipt) throws -> PatchRestoreInspection {
         let bundleIDs = try PatchTransaction.requiredBundleIdentifiers(for: receipt)
