@@ -389,6 +389,17 @@ struct FeaturesView: View {
             guard item.packageURL.pathExtension.caseInsensitiveCompare(requestedExtension) == .orderedSame else {
                 return false
             }
+
+            // Worker Release packages are stored with UUID-based filenames
+            // (RemoteRelease-<id>.3105), so also resolve them by the name
+            // inside the validated package instead of relying on the filename.
+            let projectName = item.project?.name
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .precomposedStringWithCanonicalMapping
+            if projectName?.caseInsensitiveCompare(requestedStem) == .orderedSame {
+                return true
+            }
+
             let stem = item.packageURL.deletingPathExtension().lastPathComponent
                 .precomposedStringWithCanonicalMapping
             if stem.caseInsensitiveCompare(requestedStem) == .orderedSame {
@@ -399,12 +410,16 @@ struct FeaturesView: View {
                 return false
             }
             let suffix = stem.dropFirst(requestedStem.count + 1)
-            return !suffix.isEmpty && suffix.allSatisfy(\.isNumber)
+            return !suffix.isEmpty && suffix.allSatisfy(\\.isNumber)
         }
 
-        // Prefer the suffixed bundled copy over a preserved legacy/imported
-        // package occupying the canonical filename.
+        // Prefer the Worker Release version when it has the same project name;
+        // otherwise retain the existing bundled/suffixed package preference.
         return candidates.sorted { lhs, rhs in
+            let leftRemote = lhs.packageURL.lastPathComponent.hasPrefix("RemoteRelease-")
+            let rightRemote = rhs.packageURL.lastPathComponent.hasPrefix("RemoteRelease-")
+            if leftRemote != rightRemote { return leftRemote }
+
             let leftExact = lhs.packageURL.deletingPathExtension().lastPathComponent
                 .precomposedStringWithCanonicalMapping.caseInsensitiveCompare(requestedStem) == .orderedSame
             let rightExact = rhs.packageURL.deletingPathExtension().lastPathComponent
