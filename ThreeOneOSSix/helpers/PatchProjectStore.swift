@@ -60,6 +60,9 @@ final class PatchProjectStore: ObservableObject {
     }
 
     private var pendingUnlock: PendingUnlock?
+    // Names supplied by the Admin API are authoritative for remote packages.
+    // A password-protected package has no decoded project name until unlocked.
+    private var workerPatchesByID: [UUID: WorkerPatch] = [:]
 
     init(licenseManager: LicenseManager) {
     self.licenseManager = licenseManager
@@ -85,6 +88,29 @@ final class PatchProjectStore: ObservableObject {
 
     private func isWorkerManagedPackage(_ item: PatchLibraryItem) -> Bool {
         item.packageURL.lastPathComponent.hasPrefix("RemoteRelease-")
+    }
+
+    private func normalizedRemotePatchName(_ raw: String) -> String {
+        let url = URL(fileURLWithPath: raw)
+        let stem = url.pathExtension.isEmpty ? url.lastPathComponent : url.deletingPathExtension().lastPathComponent
+        return stem.folding(
+            options: [.caseInsensitive, .diacriticInsensitive],
+            locale: Locale(identifier: "en_US_POSIX")
+        ).split(whereSeparator: \\.isWhitespace).joined(separator: " ")
+    }
+
+    /// Resolve the feature catalog entry using Admin metadata and package ID.
+    /// This also works for password-protected packages whose project.name is
+    /// intentionally unavailable until the user unlocks them.
+    func item(named package: String) -> PatchLibraryItem? {
+        let requestedURL = URL(fileURLWithPath: package)
+        let target = requestedURL.pathExtension
+        guard ["3105", "3106"].contains(target) else { return nil }
+        let requestedName = normalizedRemotePatchName(package)
+        guard let match = workerPatchesByID.first(where: { _, patch in
+            patch.target == target && normalizedRemotePatchName(patch.name) == requestedName
+        }) else { return nil }
+        return items.first(where: { $0.id == match.key })
     }
 
     private func workerPatchList(target: String) async throws -> [WorkerPatch] {
@@ -137,6 +163,7 @@ final class PatchProjectStore: ObservableObject {
                         failures.append("\(patch.name): metadata Worker không hợp lệ")
                         continue
                     }
+                    workerPatchesByID[patchUUID] = patch
 
                     let destination = rootURL.appendingPathComponent(
                         "RemoteRelease-\(patchUUID.uuidString).\(target)"
