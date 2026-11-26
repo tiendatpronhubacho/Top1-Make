@@ -393,7 +393,7 @@ struct FeaturesView: View {
         }
         return name
             .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "en_US_POSIX"))
-            .split(whereSeparator: \\.isWhitespace)
+            .split(whereSeparator: \.isWhitespace)
             .joined(separator: " ")
     }
 
@@ -427,7 +427,7 @@ struct FeaturesView: View {
                 return false
             }
             let suffix = stem.dropFirst(requestedStem.count + 1)
-            return !suffix.isEmpty && suffix.allSatisfy(\\.isNumber)
+            return !suffix.isEmpty && suffix.allSatisfy(\.isNumber)
         }
 
         // Prefer the Worker Release version when names match; then prefer an
