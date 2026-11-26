@@ -379,30 +379,47 @@ struct FeaturesView: View {
     /// Resolve the catalog package even when Project Library had to preserve an
     /// older/user-owned file at the canonical name and seed the bundled copy as
     /// "Name-2.3105" (or a later suffix).
+    /// Normalizes the visible catalog name and the name embedded in a package.
+    /// Admin uploads commonly include the target suffix (for example
+    /// "Aim Chest.3105"), while the encrypted project's internal name may not.
+    private func normalizedPatchName(_ value: String) -> String {
+        var name = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            .precomposedStringWithCanonicalMapping
+        for suffix in [".3105", ".3106"] {
+            if name.lowercased().hasSuffix(suffix) {
+                name = String(name.dropLast(suffix.count))
+                break
+            }
+        }
+        return name
+            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "en_US_POSIX"))
+            .split(whereSeparator: \\.isWhitespace)
+            .joined(separator: " ")
+    }
+
     private func bundledPatchItem(named package: String) -> PatchLibraryItem? {
         let requestedURL = URL(fileURLWithPath: package)
         let requestedExtension = requestedURL.pathExtension
         let requestedStem = requestedURL.deletingPathExtension().lastPathComponent
             .precomposedStringWithCanonicalMapping
+        let normalizedRequestedName = normalizedPatchName(requestedStem)
 
         let candidates = patchStore.items.filter { item in
             guard item.packageURL.pathExtension.caseInsensitiveCompare(requestedExtension) == .orderedSame else {
                 return false
             }
 
-            // Worker Release packages are stored with UUID-based filenames
-            // (RemoteRelease-<id>.3105), so also resolve them by the name
-            // inside the validated package instead of relying on the filename.
-            let projectName = item.project?.name
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-                .precomposedStringWithCanonicalMapping
-            if projectName?.caseInsensitiveCompare(requestedStem) == .orderedSame {
+            // RemoteRelease files use UUID filenames. Resolve them using the
+            // decoded project name, allowing an optional ".3105"/".3106"
+            // suffix and harmless case/diacritic/spacing differences.
+            if let projectName = item.project?.name,
+               normalizedPatchName(projectName) == normalizedRequestedName {
                 return true
             }
 
             let stem = item.packageURL.deletingPathExtension().lastPathComponent
                 .precomposedStringWithCanonicalMapping
-            if stem.caseInsensitiveCompare(requestedStem) == .orderedSame {
+            if normalizedPatchName(stem) == normalizedRequestedName {
                 return true
             }
             guard stem.count > requestedStem.count,
@@ -410,20 +427,20 @@ struct FeaturesView: View {
                 return false
             }
             let suffix = stem.dropFirst(requestedStem.count + 1)
-            return !suffix.isEmpty && suffix.allSatisfy(\.isNumber)
+            return !suffix.isEmpty && suffix.allSatisfy(\\.isNumber)
         }
 
-        // Prefer the Worker Release version when it has the same project name;
-        // otherwise retain the existing bundled/suffixed package preference.
+        // Prefer the Worker Release version when names match; then prefer an
+        // exact filename over a legacy numbered duplicate.
         return candidates.sorted { lhs, rhs in
             let leftRemote = lhs.packageURL.lastPathComponent.hasPrefix("RemoteRelease-")
             let rightRemote = rhs.packageURL.lastPathComponent.hasPrefix("RemoteRelease-")
             if leftRemote != rightRemote { return leftRemote }
 
-            let leftExact = lhs.packageURL.deletingPathExtension().lastPathComponent
-                .precomposedStringWithCanonicalMapping.caseInsensitiveCompare(requestedStem) == .orderedSame
-            let rightExact = rhs.packageURL.deletingPathExtension().lastPathComponent
-                .precomposedStringWithCanonicalMapping.caseInsensitiveCompare(requestedStem) == .orderedSame
+            let leftExact = normalizedPatchName(lhs.packageURL.deletingPathExtension().lastPathComponent)
+                == normalizedRequestedName
+            let rightExact = normalizedPatchName(rhs.packageURL.deletingPathExtension().lastPathComponent)
+                == normalizedRequestedName
             if leftExact != rightExact { return !leftExact }
             return lhs.packageURL.lastPathComponent.localizedStandardCompare(rhs.packageURL.lastPathComponent) == .orderedAscending
         }.first
