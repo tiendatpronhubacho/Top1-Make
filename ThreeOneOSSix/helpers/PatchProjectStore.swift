@@ -251,7 +251,11 @@ func applyPatch(_ item: PatchLibraryItem) {
     guard !isBusy else { return }
 
     guard let project = item.project else {
-        present(.invalidProject)
+        if item.isLocked {
+            requestUnlock(for: item)
+        } else {
+            present(.invalidProject)
+        }
         return
     }
 
