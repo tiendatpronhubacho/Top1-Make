@@ -311,10 +311,19 @@ struct FeaturesView: View {
                                 .padding().background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 16)).overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.3), lineWidth: 0.5))
                             }.buttonStyle(.plain)
                         } else if currentScreen == 1 {
-                            VStack(spacing: 14) {
-                                categoryButton(.aim)
-                                categoryButton(.mod)
-                                categoryButton(.location)
+                            HStack(spacing: 10) {
+                                menuButton(title: "AIM", icon: "scope") {
+                                    selectedCategory = .aim
+                                    withAnimation { currentScreen = 2 }
+                                }
+                                menuButton(title: "MOD", icon: "puzzlepiece.extension") {
+                                    selectedCategory = .mod
+                                    withAnimation { currentScreen = 2 }
+                                }
+                                menuButton(title: "ĐỊNH VỊ", icon: "mappin.and.ellipse") {
+                                    selectedCategory = .location
+                                    withAnimation { currentScreen = 2 }
+                                }
                             }
                         } else if currentScreen == 2 {
                             patchList()
