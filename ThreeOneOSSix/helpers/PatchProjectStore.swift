@@ -22,6 +22,7 @@ struct PatchStoreAlert: Identifiable {
 
 @MainActor
 final class PatchProjectStore: ObservableObject {
+    private let licenseManager: LicenseManager
     @Published private(set) var items: [PatchLibraryItem] = []
     @Published private(set) var isBusy = false
     @Published private(set) var loadIssues: [String] = []
