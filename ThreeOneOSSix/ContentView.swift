@@ -344,7 +344,6 @@ struct FeaturesView: View {
     private func patchRow(patch: AdminPatch) -> some View {
         let item = patchStore.items.first(where: { $0.id == patch.id })
         let isEnabled = item.map { patchStore.activePatchIDs.contains($0.id) } ?? false
-        let targetLabel = patch.target == "3106" ? "FREE FIRE • 3106" : "FREE FIRE • 3105"
 
         return HStack(spacing: 12) {
             Image(systemName: "scope")
@@ -357,9 +356,6 @@ struct FeaturesView: View {
                 Text(patch.name)
                     .font(.system(size: 16, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
-                Text(targetLabel)
-                    .font(.system(size: 10, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.7))
                 if item == nil {
                     Text("Chưa tải được gói Patch")
                         .font(.system(size: 9, weight: .semibold))
