@@ -217,7 +217,7 @@ final class PatchProjectStore: ObservableObject {
             do {
                 let rootURL = try PatchProjectLibrary.packageRootURL()
                 let destination = rootURL.appendingPathComponent(
-                    "RemoteRelease-\\(patch.id.uuidString).\\(patch.target)"
+                    "RemoteRelease-\(patch.id.uuidString).\(patch.target)"
                 )
 
                 let packageData = try await self.licenseManager.downloadPatchData(
@@ -239,7 +239,7 @@ final class PatchProjectStore: ObservableObject {
                     to: destination,
                     options: [.atomic, .completeFileProtection]
                 )
-                log("patch: downloaded selected Admin patch \\(patch.name), sha256=\\(actualHash)")
+                log("patch: downloaded selected Admin patch \(patch.name), sha256=\(actualHash)")
 
                 self.reload()
                 guard let downloadedItem = self.items.first(where: { $0.id == patch.id }) else {
@@ -254,7 +254,7 @@ final class PatchProjectStore: ObservableObject {
                 self.applyPatch(downloadedItem)
             } catch {
                 self.isBusy = false
-                log("patch: selected download failed -- \\(patch.name): \\(error)")
+                log("patch: selected download failed -- \(patch.name): \(error)")
                 self.alert = PatchStoreAlert(
                     titleKey: "common.failed",
                     messageKey: "patch.apply_failed"
