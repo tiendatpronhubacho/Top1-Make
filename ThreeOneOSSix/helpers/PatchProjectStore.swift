@@ -303,6 +303,7 @@ final class PatchProjectStore: ObservableObject {
                 if let ready = self.items.first(where: { $0.id == patch.id }) {
                     self.applyPatch(ready)
                 } else {
+                    self.isBusy = true
                     self.downloadAndApplyAdminPatch(patch, metadata: metadata)
                 }
             }
