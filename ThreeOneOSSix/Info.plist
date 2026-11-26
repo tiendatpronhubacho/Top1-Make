@@ -46,6 +46,9 @@
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
 
+    <key>IPAOfficialBuildMarker</key>
+    <string>TIENDAT-OFFICIAL-IPA-V1</string>
+
     <key>CFBundleName</key>
     <string>IpaProxy</string>
 
