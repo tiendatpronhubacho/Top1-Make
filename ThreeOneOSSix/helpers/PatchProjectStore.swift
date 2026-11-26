@@ -72,6 +72,7 @@ final class PatchProjectStore: ObservableObject {
     private var workerPatchesByID: [UUID: WorkerPatch] = [:]
     private var prefetchTask: Task<Void, Never>?
     private var prefetchingPatchID: UUID?
+    private var prioritizedPrefetchPatchID: UUID?
 
     init(licenseManager: LicenseManager) {
     self.licenseManager = licenseManager
@@ -154,22 +155,30 @@ final class PatchProjectStore: ObservableObject {
         return try JSONDecoder().decode(WorkerPatchList.self, from: data).patches
     }
 
+    private func workerPatchListResult(target: String) async -> Result<[WorkerPatch], Error> {
+        do {
+            return .success(try await workerPatchList(target: target))
+        } catch {
+            return .failure(error)
+        }
+    }
+
     private func downloadPatchesFromGithub() async {
         loadIssues = await downloadPatchesFromWorker()
     }
 
-    /// Fetch only the enabled patch metadata. Do not download binaries at launch.
+    /// Fetch the enabled patch metadata. Binary files are warmed in the background after this.
     private func downloadPatchesFromWorker() async -> [String] {
         var failures: [String] = []
         var availablePatches: [AdminPatch] = []
         var latestPatches: [UUID: WorkerPatch] = [:]
 
         // Fetch both target lists concurrently instead of waiting for 3105 then 3106.
-        async let list3105 = workerPatchList(target: "3105")
-        async let list3106 = workerPatchList(target: "3106")
+        async let list3105 = workerPatchListResult(target: "3105")
+        async let list3106 = workerPatchListResult(target: "3106")
         let results: [(String, Result<[WorkerPatch], Error>)] = await [
-            ("3105", await Result { try await list3105 }),
-            ("3106", await Result { try await list3106 })
+            ("3105", list3105),
+            ("3106", list3106)
         ]
 
         for (target, result) in results {
@@ -239,6 +248,9 @@ final class PatchProjectStore: ObservableObject {
                     try data.write(to: destination, options: [.atomic, .completeFileProtection])
                     log("patch: background prefetch complete \(patch.name), bytes=\(data.count)")
                     self.reload()
+                    if self.prioritizedPrefetchPatchID == patch.id {
+                        break
+                    }
                 } catch {
                     if !Task.isCancelled {
                         log("patch: background prefetch skipped \(patch.name): \(error)")
@@ -277,11 +289,13 @@ final class PatchProjectStore: ObservableObject {
         // If this exact patch is currently being prefetched, let that download
         // finish instead of starting a second copy of the same transfer.
         if prefetchingPatchID == patch.id, let runningPrefetch = prefetchTask {
+            prioritizedPrefetchPatchID = patch.id
             isBusy = true
             Task { @MainActor [weak self] in
                 await runningPrefetch.value
                 guard let self else { return }
                 self.isBusy = false
+                self.prioritizedPrefetchPatchID = nil
                 self.reload()
                 if let ready = self.items.first(where: { $0.id == patch.id }) {
                     self.applyPatch(ready)
