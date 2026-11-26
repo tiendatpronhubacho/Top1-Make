@@ -423,8 +423,9 @@ struct FeaturesView: View {
                         .foregroundStyle(.white.opacity(0.75))
                         .padding(.vertical, 24)
                 } else {
-                    ForEach(filteredPatches) { patch in
-                        patchRow(patch: patch)
+                    ForEach(Array(filteredPatches.enumerated()), id: \.element.id) { index, patch in
+                        let displayName = selectedCategory == .mod ? "Mod v\(index + 1)" : displayPatchName(patch.name)
+                        patchRow(patch: patch, displayName: displayName)
                     }
                 }
             }
@@ -436,7 +437,7 @@ struct FeaturesView: View {
         }
     }
 
-    private func patchRow(patch: AdminPatch) -> some View {
+    private func patchRow(patch: AdminPatch, displayName: String) -> some View {
         let item = patchStore.items.first(where: { $0.id == patch.id })
         let isEnabled = item.map { patchStore.activePatchIDs.contains($0.id) } ?? false
 
@@ -448,7 +449,7 @@ struct FeaturesView: View {
                 .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(displayPatchName(patch.name))
+                Text(displayName)
                     .font(.system(size: 16, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
                 if item == nil {
