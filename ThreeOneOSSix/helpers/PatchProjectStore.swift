@@ -82,14 +82,14 @@ final class PatchProjectStore: ObservableObject {
         )
     }
 
-    isBusy = true
     PatchProjectLibrary.bootstrap()
+    self.items = PatchProjectLibrary.load().filter { self.isWorkerManagedPackage($0) }
 
+    // Fetch only lightweight metadata at launch. Patch binaries are downloaded
+    // on demand after the user selects a patch.
     Task { @MainActor in
         await downloadPatchesFromGithub()
-        self.items = PatchProjectLibrary.load().filter { self.isWorkerManagedPackage($0) }
         self.updateLoadIssues()
-        self.isBusy = false
     }
 }
 
@@ -154,14 +154,11 @@ final class PatchProjectStore: ObservableObject {
         loadIssues = await downloadPatchesFromWorker()
     }
 
-    /// Only packages returned by the Admin-controlled Worker list are downloaded.
+    /// Fetch only the enabled patch metadata. Do not download binaries at launch.
     private func downloadPatchesFromWorker() async -> [String] {
         var failures: [String] = []
         var availablePatches: [AdminPatch] = []
-        workerPatchesByID.removeAll()
-        guard let rootURL = try? PatchProjectLibrary.packageRootURL() else {
-            return ["Worker Patch: không tạo được thư mục lưu package"]
-        }
+        var latestPatches: [UUID: WorkerPatch] = [:]
 
         for target in ["3105", "3106"] {
             do {
@@ -173,45 +170,91 @@ final class PatchProjectStore: ObservableObject {
                         failures.append("\(patch.name): metadata Worker không hợp lệ")
                         continue
                     }
-                    workerPatchesByID[patchUUID] = patch
-                    availablePatches.append(AdminPatch(id: patchUUID, name: patch.name, target: patch.target))
-
-                    let destination = rootURL.appendingPathComponent(
-                        "RemoteRelease-\(patchUUID.uuidString).\(target)"
+                    latestPatches[patchUUID] = patch
+                    availablePatches.append(
+                        AdminPatch(id: patchUUID, name: patch.name, target: patch.target)
                     )
-                    if FileManager.default.fileExists(atPath: destination.path),
-                       let existing = try? Data(contentsOf: destination),
-                       (try? PatchPackageCodec.inspect(existing)) != nil {
-                        let existingHash = SHA256.hash(data: existing)
-                            .map { String(format: "%02x", $0) }.joined()
-                        if existingHash.caseInsensitiveCompare(patch.sha256) == .orderedSame {
-                            continue
-                        }
-                    }
-
-                    do {
-                        let packageData = try await licenseManager.downloadPatchData(patchID: patch.id)
-                        let actualHash = SHA256.hash(data: packageData)
-                            .map { String(format: "%02x", $0) }.joined()
-                        guard actualHash.caseInsensitiveCompare(patch.sha256) == .orderedSame else {
-                            throw NSError(domain: "WorkerPatchDownload", code: 1,
-                                          userInfo: [NSLocalizedDescriptionKey: "SHA-256 không khớp"])
-                        }
-                        _ = try PatchPackageCodec.inspect(packageData)
-                        try packageData.write(to: destination, options: [.atomic, .completeFileProtection])
-                        log("patch: downloaded Admin Worker patch \(patch.name) target=\(target) sha256=\(actualHash)")
-                    } catch {
-                        failures.append("\(patch.name): \(error.localizedDescription)")
-                        log("patch: Worker Release download failed -- \(patch.name): \(error)")
-                    }
                 }
             } catch {
                 failures.append("Worker Patch \(target): \(error.localizedDescription)")
                 log("patch: Worker list failed target=\(target): \(error)")
             }
         }
-        adminPatches = availablePatches.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+
+        workerPatchesByID = latestPatches
+        adminPatches = availablePatches.sorted {
+            $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+        }
         return failures
+    }
+
+    /// Download the selected patch only, verify its SHA-256, then apply it.
+    func applyAdminPatch(_ patch: AdminPatch) {
+        guard !isBusy else { return }
+
+        if let cachedItem = items.first(where: { $0.id == patch.id }) {
+            applyPatch(cachedItem)
+            return
+        }
+
+        guard let metadata = workerPatchesByID[patch.id] else {
+            alert = PatchStoreAlert(
+                titleKey: "common.failed",
+                messageKey: "patch.apply_failed"
+            )
+            return
+        }
+
+        isBusy = true
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            do {
+                let rootURL = try PatchProjectLibrary.packageRootURL()
+                let destination = rootURL.appendingPathComponent(
+                    "RemoteRelease-\\(patch.id.uuidString).\\(patch.target)"
+                )
+
+                let packageData = try await self.licenseManager.downloadPatchData(
+                    patchID: metadata.id
+                )
+                let actualHash = SHA256.hash(data: packageData)
+                    .map { String(format: "%02x", $0) }.joined()
+
+                guard actualHash.caseInsensitiveCompare(metadata.sha256) == .orderedSame else {
+                    throw NSError(
+                        domain: "WorkerPatchDownload",
+                        code: 1,
+                        userInfo: [NSLocalizedDescriptionKey: "SHA-256 không khớp"]
+                    )
+                }
+
+                _ = try PatchPackageCodec.inspect(packageData)
+                try packageData.write(
+                    to: destination,
+                    options: [.atomic, .completeFileProtection]
+                )
+                log("patch: downloaded selected Admin patch \\(patch.name), sha256=\\(actualHash)")
+
+                self.reload()
+                guard let downloadedItem = self.items.first(where: { $0.id == patch.id }) else {
+                    throw NSError(
+                        domain: "WorkerPatchDownload",
+                        code: 2,
+                        userInfo: [NSLocalizedDescriptionKey: "Không tìm thấy Patch sau khi tải"]
+                    )
+                }
+
+                self.isBusy = false
+                self.applyPatch(downloadedItem)
+            } catch {
+                self.isBusy = false
+                log("patch: selected download failed -- \\(patch.name): \\(error)")
+                self.alert = PatchStoreAlert(
+                    titleKey: "common.failed",
+                    messageKey: "patch.apply_failed"
+                )
+            }
+        }
     }
 
     /// Re-check the Admin's live enabled list immediately before every apply.
