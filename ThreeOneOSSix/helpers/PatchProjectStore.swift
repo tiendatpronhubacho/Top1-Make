@@ -96,7 +96,7 @@ final class PatchProjectStore: ObservableObject {
         return stem.folding(
             options: [.caseInsensitive, .diacriticInsensitive],
             locale: Locale(identifier: "en_US_POSIX")
-        ).split(whereSeparator: \\.isWhitespace).joined(separator: " ")
+        ).split(whereSeparator: \.isWhitespace).joined(separator: " ")
     }
 
     /// Resolve the feature catalog entry using Admin metadata and package ID.
