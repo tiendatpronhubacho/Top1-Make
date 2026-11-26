@@ -263,9 +263,9 @@ struct FeaturesView: View {
         let name = patch.name.folding(
             options: [.caseInsensitive, .diacriticInsensitive],
             locale: Locale(identifier: "vi_VN")
-        ).lowercased()
+        ).lowercased().replacingOccurrences(of: "đ", with: "d")
 
-        // Chỉ ĐV Nhân Vật và ĐV Súng thuộc mục ĐỊNH VỊ.
+        // Chỉ hai patch ĐV Nhân Vật và ĐV Súng thuộc mục ĐỊNH VỊ.
         if name.contains("dv nhan vat") || name.contains("dv sung") {
             return .location
         }
