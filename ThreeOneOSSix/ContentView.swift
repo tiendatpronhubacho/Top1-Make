@@ -265,9 +265,8 @@ struct FeaturesView: View {
             locale: Locale(identifier: "vi_VN")
         ).lowercased()
 
-        // Các patch Định vị luôn được xếp vào đúng mục ĐỊNH VỊ.
-        if ["dinh vi", "dv nhan vat", "dv nhan bat", "dv nhan", "dv sung", "nhan vat", "nhan bat", "location", "teleport", "position"].contains(where: { name.contains($0) })
-            || name.hasPrefix("dv ") {
+        // Chỉ ĐV Nhân Vật và ĐV Súng thuộc mục ĐỊNH VỊ.
+        if name.contains("dv nhan vat") || name.contains("dv sung") {
             return .location
         }
 
