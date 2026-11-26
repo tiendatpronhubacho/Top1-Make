@@ -398,6 +398,12 @@ struct FeaturesView: View {
     }
 
     private func bundledPatchItem(named package: String) -> PatchLibraryItem? {
+        // Prefer the Admin's authoritative name-to-package-ID mapping. This
+        // does not depend on decrypting the package just to display its row.
+        if let remoteItem = patchStore.item(named: package) {
+            return remoteItem
+        }
+
         let requestedURL = URL(fileURLWithPath: package)
         let requestedExtension = requestedURL.pathExtension
         let requestedStem = requestedURL.deletingPathExtension().lastPathComponent
