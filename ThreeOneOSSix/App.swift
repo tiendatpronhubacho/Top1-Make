@@ -269,15 +269,17 @@ final class LicenseManager: ObservableObject {
             let id = try getOrCreateDeviceID()
             deviceID = id
             let signingKey = try getOrCreateSigningKey()
-            let challenge = try await requestChallenge(deviceID: id, action: "register")
-            let message = canonical(challenge: challenge, action: "register", deviceID: id, licenseKey: key)
+            let buildHash = try currentBuildHash()
+            let challenge = try await requestChallenge(deviceID: id, action: "register", buildHash: buildHash)
+            let message = canonical(challenge: challenge, action: "register", deviceID: id, licenseKey: key, buildHash: buildHash)
             let signature = try signingKey.signature(for: Data(message.utf8)).rawRepresentation.base64EncodedString()
             let payload: [String: Any] = [
     "deviceId": id,
     "licenseKey": key,
     "challenge": challenge,
     "signature": signature,
-    "appVersion": appVersion
+    "appVersion": appVersion,
+    "buildHash": buildHash
 ]
             let result: LicenseResult = try await post("/v2/device/register", payload: payload)
             guard result.ok else { throw LicenseFailure.server(result.error ?? "license_denied") }
@@ -305,15 +307,17 @@ final class LicenseManager: ObservableObject {
             let id = try getOrCreateDeviceID()
             deviceID = id
             let signingKey = try getOrCreateSigningKey()
-            let challenge = try await requestChallenge(deviceID: id, action: "verify")
-            let message = canonical(challenge: challenge, action: "verify", deviceID: id, licenseKey: key)
+            let buildHash = try currentBuildHash()
+            let challenge = try await requestChallenge(deviceID: id, action: "verify", buildHash: buildHash)
+            let message = canonical(challenge: challenge, action: "verify", deviceID: id, licenseKey: key, buildHash: buildHash)
             let signature = try signingKey.signature(for: Data(message.utf8)).rawRepresentation.base64EncodedString()
             let payload: [String: Any] = [
                 "deviceId": id,
                 "licenseKey": key,
                 "challenge": challenge,
                 "signature": signature,
-                "appVersion": appVersion
+                "appVersion": appVersion,
+                "buildHash": buildHash
             ]
             let result: LicenseResult = try await post("/v2/device/verify", payload: payload)
             guard result.ok else { throw LicenseFailure.server(result.error ?? "license_denied") }
@@ -350,17 +354,20 @@ func authorizePatch(action: String) async throws {
     deviceID = id
 
     let signingKey = try getOrCreateSigningKey()
+    let buildHash = try currentBuildHash()
 
     let challenge = try await requestChallenge(
         deviceID: id,
-        action: action
+        action: action,
+        buildHash: buildHash
     )
 
     let message = canonical(
         challenge: challenge,
         action: action,
         deviceID: id,
-        licenseKey: key
+        licenseKey: key,
+        buildHash: buildHash
     )
 
     let signature = try signingKey
@@ -372,7 +379,8 @@ func authorizePatch(action: String) async throws {
         "deviceId": id,
         "licenseKey": key,
         "challenge": challenge,
-        "signature": signature
+        "signature": signature,
+        "buildHash": buildHash
     ]
 
     let endpoint = action == "patch_download"
@@ -402,8 +410,9 @@ func authorizePatch(action: String) async throws {
         let id = try getOrCreateDeviceID()
         deviceID = id
         let signingKey = try getOrCreateSigningKey()
-        let challenge = try await requestChallenge(deviceID: id, action: "patch_download")
-        let message = canonical(challenge: challenge, action: "patch_download", deviceID: id, licenseKey: key)
+        let buildHash = try currentBuildHash()
+        let challenge = try await requestChallenge(deviceID: id, action: "patch_download", buildHash: buildHash)
+        let message = canonical(challenge: challenge, action: "patch_download", deviceID: id, licenseKey: key, buildHash: buildHash)
         let signature = try signingKey.signature(for: Data(message.utf8))
             .rawRepresentation.base64EncodedString()
 
@@ -414,7 +423,8 @@ func authorizePatch(action: String) async throws {
                 "licenseKey": key,
                 "patchId": patchID,
                 "challenge": challenge,
-                "signature": signature
+                "signature": signature,
+                "buildHash": buildHash
             ]
         )
         guard authorization.ok, let ticket = authorization.ticket, !ticket.isEmpty else {
@@ -464,12 +474,19 @@ func authorizePatch(action: String) async throws {
         if let timestamp = result.expiresAt { expiresAt = Date(timeIntervalSince1970: TimeInterval(timestamp)) }
     }
 
-    private func canonical(challenge: String, action: String, deviceID: String, licenseKey: String) -> String {
-        "\(challenge)\n\(action)\n\(deviceID)\n\(licenseKey)"
+    private func currentBuildHash() throws -> String {
+        let infoURL = Bundle.main.bundleURL.appendingPathComponent("Info.plist", isDirectory: false)
+        let data = try Data(contentsOf: infoURL, options: [.mappedIfSafe])
+        guard !data.isEmpty else { throw LicenseFailure.server("official_ipa_required") }
+        return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 
-    private func requestChallenge(deviceID: String, action: String) async throws -> String {
-        let response: LicenseChallenge = try await post("/v2/challenge", payload: ["deviceId": deviceID, "action": action])
+    private func canonical(challenge: String, action: String, deviceID: String, licenseKey: String, buildHash: String) -> String {
+        "\(challenge)\n\(action)\n\(deviceID)\n\(licenseKey)\n\(buildHash)"
+    }
+
+    private func requestChallenge(deviceID: String, action: String, buildHash: String) async throws -> String {
+        let response: LicenseChallenge = try await post("/v2/challenge", payload: ["deviceId": deviceID, "action": action, "buildHash": buildHash])
         guard response.ok else { throw LicenseFailure.server("challenge_failed") }
         return response.challenge
     }
@@ -578,7 +595,8 @@ private enum LicenseFailure: LocalizedError {
     "maintenance": "Máy chủ đang bảo trì. Không thể thực hiện Patch.",
     "server_locked": "Máy chủ đã bị khóa khẩn cấp. Không thể thực hiện Patch.",
     "patch_authorization_denied": "Máy chủ từ chối quyền thực hiện Patch.",
-    "invalid_patch_action": "Hành động Patch không hợp lệ."
+    "invalid_patch_action": "Hành động Patch không hợp lệ.",
+    "official_ipa_required": "Bản IPA này chưa được quản trị viên duyệt. Vui lòng cài đặt IPA chính thức mới nhất."
 ]
             return messages[code] ?? "Xác thực thất bại: \(code)"
         }
