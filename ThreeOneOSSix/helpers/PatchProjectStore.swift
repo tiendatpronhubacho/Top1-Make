@@ -70,6 +70,8 @@ final class PatchProjectStore: ObservableObject {
     // Names supplied by the Admin API are authoritative for remote packages.
     // A password-protected package has no decoded project name until unlocked.
     private var workerPatchesByID: [UUID: WorkerPatch] = [:]
+    private var prefetchTask: Task<Void, Never>?
+    private var prefetchingPatchID: UUID?
 
     init(licenseManager: LicenseManager) {
     self.licenseManager = licenseManager
@@ -87,9 +89,11 @@ final class PatchProjectStore: ObservableObject {
 
     // Fetch only lightweight metadata at launch. Patch binaries are downloaded
     // on demand after the user selects a patch.
-    Task { @MainActor in
-        await downloadPatchesFromGithub()
+    Task { @MainActor [weak self] in
+        guard let self else { return }
+        await self.downloadPatchesFromGithub()
         self.updateLoadIssues()
+        self.startBackgroundPatchPrefetch()
     }
 }
 
@@ -160,9 +164,17 @@ final class PatchProjectStore: ObservableObject {
         var availablePatches: [AdminPatch] = []
         var latestPatches: [UUID: WorkerPatch] = [:]
 
-        for target in ["3105", "3106"] {
-            do {
-                let patches = try await workerPatchList(target: target)
+        // Fetch both target lists concurrently instead of waiting for 3105 then 3106.
+        async let list3105 = workerPatchList(target: "3105")
+        async let list3106 = workerPatchList(target: "3106")
+        let results: [(String, Result<[WorkerPatch], Error>)] = await [
+            ("3105", await Result { try await list3105 }),
+            ("3106", await Result { try await list3106 })
+        ]
+
+        for (target, result) in results {
+            switch result {
+            case .success(let patches):
                 for patch in patches {
                     guard patch.target == target,
                           let patchUUID = UUID(uuidString: patch.id),
@@ -175,7 +187,7 @@ final class PatchProjectStore: ObservableObject {
                         AdminPatch(id: patchUUID, name: patch.name, target: patch.target)
                     )
                 }
-            } catch {
+            case .failure(let error):
                 failures.append("Worker Patch \(target): \(error.localizedDescription)")
                 log("patch: Worker list failed target=\(target): \(error)")
             }
@@ -186,6 +198,57 @@ final class PatchProjectStore: ObservableObject {
             $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
         }
         return failures
+    }
+
+    /// Warm the local cache after the lightweight Admin list is loaded.
+    /// This runs in the background and never holds the UI's busy state.
+    private func startBackgroundPatchPrefetch() {
+        guard licenseManager.isLicensed, !adminPatches.isEmpty else { return }
+        prefetchTask?.cancel()
+        prefetchTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            for patch in self.adminPatches {
+                if Task.isCancelled { break }
+                guard let metadata = self.workerPatchesByID[patch.id] else { continue }
+
+                if let cached = self.items.first(where: { $0.id == patch.id }),
+                   let data = try? Data(contentsOf: cached.packageURL) {
+                    let hash = SHA256.hash(data: data)
+                        .map { String(format: "%02x", $0) }.joined()
+                    if hash.caseInsensitiveCompare(metadata.sha256) == .orderedSame,
+                       (try? PatchPackageCodec.inspect(data)) != nil {
+                        continue
+                    }
+                }
+
+                self.prefetchingPatchID = patch.id
+                do {
+                    let data = try await self.licenseManager.downloadPatchData(patchID: metadata.id)
+                    if Task.isCancelled { break }
+                    let hash = SHA256.hash(data: data)
+                        .map { String(format: "%02x", $0) }.joined()
+                    guard hash.caseInsensitiveCompare(metadata.sha256) == .orderedSame else {
+                        throw NSError(domain: "WorkerPatchPrefetch", code: 1,
+                                      userInfo: [NSLocalizedDescriptionKey: "SHA-256 không khớp"])
+                    }
+                    _ = try PatchPackageCodec.inspect(data)
+                    let root = try PatchProjectLibrary.packageRootURL()
+                    let destination = root.appendingPathComponent(
+                        "RemoteRelease-\(patch.id.uuidString).\(patch.target)"
+                    )
+                    try data.write(to: destination, options: [.atomic, .completeFileProtection])
+                    log("patch: background prefetch complete \(patch.name), bytes=\(data.count)")
+                    self.reload()
+                } catch {
+                    if !Task.isCancelled {
+                        log("patch: background prefetch skipped \(patch.name): \(error)")
+                    }
+                }
+                self.prefetchingPatchID = nil
+            }
+            self.prefetchingPatchID = nil
+            self.prefetchTask = nil
+        }
     }
 
     /// Download the selected patch only, verify its SHA-256, then apply it.
@@ -211,7 +274,32 @@ final class PatchProjectStore: ObservableObject {
             }
         }
 
+        // If this exact patch is currently being prefetched, let that download
+        // finish instead of starting a second copy of the same transfer.
+        if prefetchingPatchID == patch.id, let runningPrefetch = prefetchTask {
+            isBusy = true
+            Task { @MainActor [weak self] in
+                await runningPrefetch.value
+                guard let self else { return }
+                self.isBusy = false
+                self.reload()
+                if let ready = self.items.first(where: { $0.id == patch.id }) {
+                    self.applyPatch(ready)
+                } else {
+                    self.downloadAndApplyAdminPatch(patch, metadata: metadata)
+                }
+            }
+            return
+        }
+
+        // Prioritize the tapped patch over the remaining background queue.
+        prefetchTask?.cancel()
+        prefetchTask = nil
         isBusy = true
+        downloadAndApplyAdminPatch(patch, metadata: metadata)
+    }
+
+    private func downloadAndApplyAdminPatch(_ patch: AdminPatch, metadata: WorkerPatch) {
         Task { @MainActor [weak self] in
             guard let self else { return }
             do {
