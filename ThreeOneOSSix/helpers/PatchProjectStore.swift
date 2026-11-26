@@ -107,8 +107,9 @@ final class PatchProjectStore: ObservableObject {
         let target = requestedURL.pathExtension
         guard ["3105", "3106"].contains(target) else { return nil }
         let requestedName = normalizedRemotePatchName(package)
-        guard let match = workerPatchesByID.first(where: { _, patch in
-            patch.target == target && normalizedRemotePatchName(patch.name) == requestedName
+        guard let match = workerPatchesByID.first(where: { entry in
+            entry.value.target == target
+                && normalizedRemotePatchName(entry.value.name) == requestedName
         }) else { return nil }
         return items.first(where: { $0.id == match.key })
     }
