@@ -266,7 +266,8 @@ struct FeaturesView: View {
         ).lowercased()
 
         // Các patch Định vị luôn được xếp vào đúng mục ĐỊNH VỊ.
-        if ["dinh vi", "dv nhan vat", "dv nhan", "dv sung", "location", "teleport", "position"].contains(where: { name.contains($0) }) {
+        if ["dinh vi", "dv nhan vat", "dv nhan bat", "dv nhan", "dv sung", "nhan vat", "nhan bat", "location", "teleport", "position"].contains(where: { name.contains($0) })
+            || name.hasPrefix("dv ") {
             return .location
         }
 
