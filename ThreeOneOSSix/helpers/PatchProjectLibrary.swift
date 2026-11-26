@@ -70,7 +70,6 @@ enum PatchProjectLibrary {
 
     static func load(fileManager: FileManager = .default) -> [PatchLibraryItem] {
         guard let root = try? packageRootURL(fileManager: fileManager) else { return [] }
-        seedBundledPackages(into: root, fileManager: fileManager)
         guard let urls = try? fileManager.contentsOfDirectory(
             at: root,
             includingPropertiesForKeys: [.contentModificationDateKey, .fileSizeKey],
