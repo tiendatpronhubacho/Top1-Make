@@ -322,6 +322,69 @@ final class LicenseManager: ObservableObject {
             errorMessage = error.localizedDescription
         }
     }
+    // MARK: - Patch Authorization
+
+func authorizePatch(action: String) async throws {
+    guard action == "patch_download" ||
+          action == "patch_apply" else {
+        throw LicenseFailure.server("invalid_patch_action")
+    }
+
+    guard isLicensed else {
+        throw LicenseFailure.server("license_invalid")
+    }
+
+    guard let key = try keychainRead(
+        account: LicenseConfig.licenseAccount
+    ), !key.isEmpty else {
+        isLicensed = false
+        throw LicenseFailure.server("license_invalid")
+    }
+
+    let id = try getOrCreateDeviceID()
+    deviceID = id
+
+    let signingKey = try getOrCreateSigningKey()
+
+    let challenge = try await requestChallenge(
+        deviceID: id,
+        action: action
+    )
+
+    let message = canonical(
+        challenge: challenge,
+        action: action,
+        deviceID: id,
+        licenseKey: key
+    )
+
+    let signature = try signingKey
+        .signature(for: Data(message.utf8))
+        .rawRepresentation
+        .base64EncodedString()
+
+    let payload: [String: Any] = [
+        "deviceId": id,
+        "licenseKey": key,
+        "challenge": challenge,
+        "signature": signature
+    ]
+
+    let endpoint = action == "patch_download"
+        ? "/v2/patch/authorize-download"
+        : "/v2/patch/authorize-apply"
+
+    let result: LicenseResult = try await post(
+        endpoint,
+        payload: payload
+    )
+
+    guard result.ok else {
+        throw LicenseFailure.server(
+            result.error ?? "patch_authorization_denied"
+        )
+    }
+}
 
     func deactivateLocalKey() {
         try? keychainDelete(account: LicenseConfig.licenseAccount)
@@ -449,14 +512,18 @@ private enum LicenseFailure: LocalizedError {
         case .keyStorage: return "Không thể truy cập Keychain hoặc Secure Enclave trên thiết bị này."
         case .server(let code):
             let messages: [String: String] = [
-                "license_invalid": "License Key không tồn tại hoặc đã bị vô hiệu hóa.",
-                "license_expired": "License Key đã hết hạn.",
-                "device_blocked": "Thiết bị này đã bị quản trị viên khóa.",
-                "device_limit_reached": "License đã đạt giới hạn thiết bị.",
-                "device_already_bound": "Device ID này đã liên kết với License khác.",
-                "device_key_mismatch": "Khóa bảo mật thiết bị không khớp. Hãy liên hệ quản trị viên để gỡ liên kết.",
-                "device_not_registered": "Thiết bị chưa được đăng ký với License này."
-            ]
+    "license_invalid": "License Key không tồn tại hoặc đã bị vô hiệu hóa.",
+    "license_expired": "License Key đã hết hạn.",
+    "device_blocked": "Thiết bị này đã bị quản trị viên khóa.",
+    "device_limit_reached": "License đã đạt giới hạn thiết bị.",
+    "device_already_bound": "Device ID này đã liên kết với License khác.",
+    "device_key_mismatch": "Khóa bảo mật thiết bị không khớp. Hãy liên hệ quản trị viên để gỡ liên kết.",
+    "device_not_registered": "Thiết bị chưa được đăng ký với License này.",
+    "maintenance": "Máy chủ đang bảo trì. Không thể thực hiện Patch.",
+    "server_locked": "Máy chủ đã bị khóa khẩn cấp. Không thể thực hiện Patch.",
+    "patch_authorization_denied": "Máy chủ từ chối quyền thực hiện Patch.",
+    "invalid_patch_action": "Hành động Patch không hợp lệ."
+]
             return messages[code] ?? "Xác thực thất bại: \(code)"
         }
     }
