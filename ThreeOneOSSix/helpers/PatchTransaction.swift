@@ -212,6 +212,7 @@ enum PatchTransaction {
         do {
             try fileManager.createDirectory(at: transactionDirectory, withIntermediateDirectories: true)
         } catch {
+            log("patch: transaction directory creation failed: \(error)")
             throw PatchPackageError.applyFailed
         }
 
@@ -268,6 +269,7 @@ enum PatchTransaction {
         } catch let error as PatchPackageError {
             throw error
         } catch {
+            log("patch: backup preparation failed: \(error)")
             throw PatchPackageError.applyFailed
         }
 
@@ -284,6 +286,7 @@ enum PatchTransaction {
         do {
             try writeJournal(journal, to: journalURL)
         } catch {
+            log("patch: journal preparation failed: \(error)")
             throw PatchPackageError.applyFailed
         }
 
@@ -359,6 +362,7 @@ enum PatchTransaction {
                 journalURL: journalURL
             )
         } catch {
+            log("patch: write phase failed; starting rollback: \(error)")
             do {
                 try restoreRecords(
                     records,
@@ -371,7 +375,7 @@ enum PatchTransaction {
                 journal.status = .rolledBack
                 try writeJournal(journal, to: journalURL)
             } catch {
-                // Preserve the prepared journal and backups for explicit recovery.
+                log("patch: rollback failed; recovery journal and backups retained: \(error)")
             }
             throw PatchPackageError.applyFailed
         }
