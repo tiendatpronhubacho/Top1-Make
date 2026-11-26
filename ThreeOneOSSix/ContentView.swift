@@ -366,11 +366,11 @@ struct FeaturesView: View {
             Spacer()
 
             Button {
-                guard let item, !patchStore.isBusy else { return }
-                if isEnabled {
+                guard !patchStore.isBusy else { return }
+                if isEnabled, let item {
                     patchStore.restorePatch(item)
                 } else {
-                    patchStore.applyPatch(item)
+                    patchStore.applyAdminPatch(patch)
                 }
             } label: {
                 ZStack {
@@ -379,7 +379,7 @@ struct FeaturesView: View {
                 }
             }
             .buttonStyle(.plain)
-            .disabled(patchStore.isBusy || item == nil)
+            .disabled(patchStore.isBusy)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
