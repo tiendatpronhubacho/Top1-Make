@@ -144,38 +144,51 @@ final class PatchProjectStore: ObservableObject {
 
     // MARK: - Apply & Restore (Có cập nhật nút gạt)
 
-    func applyPatch(_ item: PatchLibraryItem) {
-        guard !isBusy else { return }
-        guard let project = item.project else {
-            present(.invalidProject)
-            return
-        }
-        
-        isBusy = true
-        let itemID = item.id
-        
-        Task { @MainActor [weak self] in
-            do {
-                _ = try await Task.detached(priority: .userInitiated) {
-                    try DevicePatchService.apply(project: project, licenseManager: licenseManager)
-                }.value
-                
-                guard let self = self else { return }
-                self.activePatchIDs.insert(itemID)
-                self.isBusy = false
-                self.alert = PatchStoreAlert(titleKey: "common.done", messageKey: "patch.applied_message")
-            } catch let error as PatchPackageError {
-                guard let self = self else { return }
-                self.isBusy = false
-                self.present(error)
-            } catch {
-                guard let self = self else { return }
-                self.isBusy = false
-                self.present(.applyFailed)
-            }
-        }
+    
+func applyPatch(_ item: PatchLibraryItem) {
+    guard !isBusy else { return }
+
+    guard let project = item.project else {
+        present(.invalidProject)
+        return
     }
 
+    isBusy = true
+    let itemID = item.id
+
+    Task { @MainActor [weak self] in
+        guard let self else { return }
+
+        do {
+            _ = try await DevicePatchService.apply(
+                project: project,
+                licenseManager: self.licenseManager
+            )
+
+            self.activePatchIDs.insert(itemID)
+            self.isBusy = false
+
+            self.alert = PatchStoreAlert(
+                titleKey: "common.done",
+                messageKey: "patch.applied_message"
+            )
+
+        } catch let error as PatchPackageError {
+            self.isBusy = false
+            self.present(error)
+
+        } catch {
+            self.isBusy = false
+
+            log("patch: apply failed: \(error.localizedDescription)")
+
+            self.alert = PatchStoreAlert(
+                titleKey: "common.failed",
+                messageKey: "patch.apply_failed"
+            )
+        }
+    }
+}
     func restorePatch(_ item: PatchLibraryItem) {
         guard !isBusy else { return }
         let itemID = item.id
