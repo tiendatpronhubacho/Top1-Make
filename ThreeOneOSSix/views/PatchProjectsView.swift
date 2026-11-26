@@ -658,6 +658,7 @@ extension View {
 
 private struct PatchProjectDetailView: View {
     @Environment(\.appLanguage) private var language
+    @EnvironmentObject private var licenseManager: LicenseManager
     @ObservedObject var store: PatchProjectStore
     let projectID: UUID
     @State private var showEditor = false
@@ -988,37 +989,53 @@ private struct PatchProjectDetailView: View {
         }
     }
 
+    
     private func apply() {
         guard let item, let baseProject = item.project else { return }
+
         isWorking = true
-        Task.detached(priority: .userInitiated) {
+
+        Task { @MainActor in
             do {
-                let project = item.summary.schemaVersion >= 2 && item.canInspectContents
-                    ? try PatchProjectLibrary.synchronizeWorkspace(item: item)
-                    : baseProject
-                _ = try DevicePatchService.apply(project: project)
-                await MainActor.run {
-                    store.reload()
-                    isWorking = false
-                    actionAlert = PatchStoreAlert(titleKey: "common.done", messageKey: "patch.applied_message")
-                }
+                let project = try await Task.detached(priority: .userInitiated) {
+                    if item.summary.schemaVersion >= 2 && item.canInspectContents {
+                        return try PatchProjectLibrary.synchronizeWorkspace(item: item)
+                    }
+                    return baseProject
+                }.value
+
+                // Xác thực License với Worker trước khi ghi Patch.
+                _ = try await DevicePatchService.apply(
+                    project: project,
+                    licenseManager: licenseManager
+                )
+
+                store.reload()
+                isWorking = false
+                actionAlert = PatchStoreAlert(
+                    titleKey: "common.done",
+                    messageKey: "patch.applied_message"
+                )
+
             } catch let error as PatchPackageError {
-                await MainActor.run {
-                    isWorking = false
-                    actionAlert = PatchStoreAlert(
-                        titleKey: "common.failed",
-                        messageKey: privateErrorKey(for: error),
-                        messageArgument: privateErrorArgument(for: error)
-                    )
-                }
+                isWorking = false
+                actionAlert = PatchStoreAlert(
+                    titleKey: "common.failed",
+                    messageKey: privateErrorKey(for: error),
+                    messageArgument: privateErrorArgument(for: error)
+                )
+
             } catch {
-                await MainActor.run {
-                    isWorking = false
-                    actionAlert = PatchStoreAlert(titleKey: "common.failed", messageKey: "patch.error.apply")
-                }
+                isWorking = false
+                actionAlert = PatchStoreAlert(
+                    titleKey: "common.failed",
+                    messageKey: "patch.error.apply"
+                )
+                log("patch: apply failed - \(error.localizedDescription)")
             }
         }
     }
+
 
     private func prepareExport() {
         guard let item else { return }
