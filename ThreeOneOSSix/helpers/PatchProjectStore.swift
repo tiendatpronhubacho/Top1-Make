@@ -111,19 +111,41 @@ final class PatchProjectStore: ObservableObject {
         ).split(whereSeparator: \.isWhitespace).joined(separator: " ")
     }
 
-    /// Resolve the feature catalog entry using Admin metadata and package ID.
-    /// This also works for password-protected packages whose project.name is
-    /// intentionally unavailable until the user unlocks them.
+    private func remotePatchKey(name: String, target: String) -> String {
+        "\(target)|\(normalizedRemotePatchName(name))"
+    }
+
+    private func remoteCacheFilename(name: String, target: String) -> String {
+        let key = remotePatchKey(name: name, target: target)
+        let digest = SHA256.hash(data: Data(key.utf8))
+            .map { String(format: "%02x", $0) }.joined()
+        return "RemoteRelease-\(digest).\(target)"
+    }
+
+    private func cachedItem(for patch: AdminPatch) -> PatchLibraryItem? {
+        let filename = remoteCacheFilename(name: patch.name, target: patch.target)
+        if let item = items.first(where: { $0.packageURL.lastPathComponent == filename }) {
+            return item
+        }
+        // Backward compatibility with cache files created by older app versions.
+        return items.first(where: { $0.id == patch.id })
+    }
+
+    private func hasActiveReceipt(_ item: PatchLibraryItem) -> Bool {
+        DevicePatchService.latestReceipt(projectID: item.id) != nil
+    }
+
+    /// Resolve a remote package by its exact Admin name and target, not by its
+    /// changing Worker UUID. This also supports password-protected packages.
     func item(named package: String) -> PatchLibraryItem? {
         let requestedURL = URL(fileURLWithPath: package)
         let target = requestedURL.pathExtension
         guard ["3105", "3106"].contains(target) else { return nil }
         let requestedName = normalizedRemotePatchName(package)
-        guard let match = workerPatchesByID.first(where: { entry in
-            entry.value.target == target
-                && normalizedRemotePatchName(entry.value.name) == requestedName
+        guard let patch = adminPatches.first(where: {
+            $0.target == target && normalizedRemotePatchName($0.name) == requestedName
         }) else { return nil }
-        return items.first(where: { $0.id == match.key })
+        return cachedItem(for: patch)
     }
 
     private func workerPatchList(target: String) async throws -> [WorkerPatch] {
@@ -220,12 +242,27 @@ final class PatchProjectStore: ObservableObject {
                 if Task.isCancelled { break }
                 guard let metadata = self.workerPatchesByID[patch.id] else { continue }
 
-                if let cached = self.items.first(where: { $0.id == patch.id }),
+                if let cached = self.cachedItem(for: patch),
                    let data = try? Data(contentsOf: cached.packageURL) {
                     let hash = SHA256.hash(data: data)
                         .map { String(format: "%02x", $0) }.joined()
                     if hash.caseInsensitiveCompare(metadata.sha256) == .orderedSame,
                        (try? PatchPackageCodec.inspect(data)) != nil {
+                        // Migrate an older UUID-named cache to the stable name-based path.
+                        let destination = try? PatchProjectLibrary.packageRootURL()
+                            .appendingPathComponent(self.remoteCacheFilename(name: patch.name, target: patch.target))
+                        if let destination,
+                           cached.packageURL.lastPathComponent != destination.lastPathComponent,
+                           !self.hasActiveReceipt(cached) {
+                            try? FileManager.default.moveItem(at: cached.packageURL, to: destination)
+                            self.reload()
+                        }
+                        continue
+                    }
+                    // Never replace bytes while their package identity owns an active
+                    // restore receipt. Keep the old package intact until it is restored.
+                    if self.hasActiveReceipt(cached) {
+                        log("patch: defer same-name update until restore: \(patch.name)")
                         continue
                     }
                 }
@@ -243,7 +280,7 @@ final class PatchProjectStore: ObservableObject {
                     _ = try PatchPackageCodec.inspect(data)
                     let root = try PatchProjectLibrary.packageRootURL()
                     let destination = root.appendingPathComponent(
-                        "RemoteRelease-\(patch.id.uuidString).\(patch.target)"
+                        self.remoteCacheFilename(name: patch.name, target: patch.target)
                     )
                     try data.write(to: destination, options: [.atomic, .completeFileProtection])
                     log("patch: background prefetch complete \(patch.name), bytes=\(data.count)")
@@ -278,13 +315,18 @@ final class PatchProjectStore: ObservableObject {
             return
         }
 
-        if let cachedItem = items.first(where: { $0.id == patch.id }),
+        if let cachedItem = cachedItem(for: patch),
            let cachedData = try? Data(contentsOf: cachedItem.packageURL) {
             let cachedHash = SHA256.hash(data: cachedData)
                 .map { String(format: "%02x", $0) }.joined()
             if cachedHash.caseInsensitiveCompare(metadata.sha256) == .orderedSame,
                (try? PatchPackageCodec.inspect(cachedData)) != nil {
                 applyPatch(cachedItem)
+                return
+            }
+            if hasActiveReceipt(cachedItem) {
+                alert = PatchStoreAlert(titleKey: "common.failed", messageKey: "patch.apply_failed")
+                log("patch: cannot replace same-name package while its old version is active: \(patch.name)")
                 return
             }
         }
@@ -300,7 +342,7 @@ final class PatchProjectStore: ObservableObject {
                 self.isBusy = false
                 self.prioritizedPrefetchPatchID = nil
                 self.reload()
-                if let ready = self.items.first(where: { $0.id == patch.id }) {
+                if let ready = self.cachedItem(for: patch) {
                     self.applyPatch(ready)
                 } else {
                     self.isBusy = true
@@ -323,7 +365,7 @@ final class PatchProjectStore: ObservableObject {
             do {
                 let rootURL = try PatchProjectLibrary.packageRootURL()
                 let destination = rootURL.appendingPathComponent(
-                    "RemoteRelease-\(patch.id.uuidString).\(patch.target)"
+                    self.remoteCacheFilename(name: patch.name, target: patch.target)
                 )
 
                 let packageData = try await self.licenseManager.downloadPatchData(
@@ -348,7 +390,7 @@ final class PatchProjectStore: ObservableObject {
                 log("patch: downloaded selected Admin patch \(patch.name), sha256=\(actualHash)")
 
                 self.reload()
-                guard let downloadedItem = self.items.first(where: { $0.id == patch.id }) else {
+                guard let downloadedItem = self.cachedItem(for: patch) else {
                     throw NSError(
                         domain: "WorkerPatchDownload",
                         code: 2,
@@ -373,20 +415,29 @@ final class PatchProjectStore: ObservableObject {
     /// A cached package is never sufficient authorization to activate a patch.
     private func isWorkerPatchEnabled(_ item: PatchLibraryItem) async throws -> Bool {
         let filename = item.packageURL.lastPathComponent
-        let stem = item.packageURL.deletingPathExtension().lastPathComponent
-        let prefix = "RemoteRelease-"
-        guard stem.hasPrefix(prefix),
-              let remoteID = UUID(uuidString: String(stem.dropFirst(prefix.count))),
-              ["3105", "3106"].contains(item.packageURL.pathExtension) else {
+        let target = item.packageURL.pathExtension
+        guard ["3105", "3106"].contains(target),
+              let metadata = workerPatchesByID.values.first(where: { candidate in
+                  candidate.target == target &&
+                  item.packageURL.lastPathComponent == remoteCacheFilename(
+                      name: candidate.name,
+                      target: candidate.target
+                  )
+              }) ?? workerPatchesByID.values.first(where: { candidate in
+                  guard candidate.target == target,
+                        let remoteID = UUID(uuidString: candidate.id) else { return false }
+                  return item.id == remoteID
+              }) else {
+            log("patch: activation denied; local package has no matching Admin name: \(filename)")
             return false
         }
 
-        let target = item.packageURL.pathExtension
         let patches = try await workerPatchList(target: target)
         guard let patch = patches.first(where: {
-            UUID(uuidString: $0.id) == remoteID && $0.target == target
+            $0.target == target &&
+            normalizedRemotePatchName($0.name) == normalizedRemotePatchName(metadata.name)
         }) else {
-            log("patch: activation denied; Admin has disabled or removed \(filename)")
+            log("patch: activation denied; Admin has disabled or removed \(metadata.name)")
             return false
         }
 
