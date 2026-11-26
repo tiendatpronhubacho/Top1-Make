@@ -53,26 +53,48 @@ func loadImageFromBundle(named name: String) -> Image {
     return Image(systemName: "photo")
 }
 
-// MARK: - MAIN CONTENT VIEW (3 TAB TIẾN ĐẠT)
+// MARK: - CONTENT VIEW
 struct ContentView: View {
-    @Environment(\.scenePhase) private var scenePhase
+    @EnvironmentObject private var licenseManager: LicenseManager
+
+    var body: some View {
+        LicensedContentView(licenseManager: licenseManager)
+    }
+}
+
+// MARK: - MAIN CONTENT VIEW (3 TAB TIẾN ĐẠT)
+private struct LicensedContentView: View {
     @EnvironmentObject private var appState: AppState
-    @StateObject private var patchStore = PatchProjectStore()
-    
+
+    @StateObject private var patchStore: PatchProjectStore
     @State private var selectedTab = 0
+
+    init(licenseManager: LicenseManager) {
+        _patchStore = StateObject(
+            wrappedValue: PatchProjectStore(
+                licenseManager: licenseManager
+            )
+        )
+    }
 
     var body: some View {
         TabView(selection: $selectedTab) {
             HomeView(patchStore: patchStore)
-                .tabItem { Label("Trang chủ", systemImage: "house.fill") }
+                .tabItem {
+                    Label("Trang chủ", systemImage: "house")
+                }
                 .tag(0)
-            
+
             FeaturesView(patchStore: patchStore)
-                .tabItem { Label("Chức năng", systemImage: "cube.fill") }
+                .tabItem {
+                    Label("Tính năng", systemImage: "square.grid.2x2")
+                }
                 .tag(1)
-            
+
             SettingsView()
-                .tabItem { Label("Cài đặt", systemImage: "gearshape.fill") }
+                .tabItem {
+                    Label("Cài đặt", systemImage: "gearshape")
+                }
                 .tag(2)
         }
         .accentColor(.white)
@@ -83,7 +105,10 @@ struct ContentView: View {
             configureTabBarAppearance()
             appState.detectSupport()
         }
-        .sheet(item: $patchStore.passwordRequest, onDismiss: patchStore.cancelUnlock) { _ in
+        .sheet(
+            item: $patchStore.passwordRequest,
+            onDismiss: patchStore.cancelUnlock
+        ) { _ in
             PatchUnlockPrompt(store: patchStore)
         }
     }
