@@ -267,13 +267,12 @@ final class LicenseManager: ObservableObject {
             let message = canonical(challenge: challenge, action: "register", deviceID: id, licenseKey: key)
             let signature = try signingKey.signature(for: Data(message.utf8)).rawRepresentation.base64EncodedString()
             let payload: [String: Any] = [
-                "deviceId": id,
-                "licenseKey": key,
-                "publicKey": signingKey.publicKey.rawRepresentation.base64EncodedString(),
-                "challenge": challenge,
-                "signature": signature,
-                "appVersion": appVersion
-            ]
+    "deviceId": id,
+    "licenseKey": key,
+    "challenge": challenge,
+    "signature": signature,
+    "appVersion": appVersion
+]
             let result: LicenseResult = try await post("/v2/device/register", payload: payload)
             guard result.ok else { throw LicenseFailure.server(result.error ?? "license_denied") }
             try keychainSave(key, account: LicenseConfig.licenseAccount)
