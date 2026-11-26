@@ -410,7 +410,7 @@ struct FeaturesView: View {
                 return false
             }
             let suffix = stem.dropFirst(requestedStem.count + 1)
-            return !suffix.isEmpty && suffix.allSatisfy(\\.isNumber)
+            return !suffix.isEmpty && suffix.allSatisfy(\.isNumber)
         }
 
         // Prefer the Worker Release version when it has the same project name;
