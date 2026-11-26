@@ -261,9 +261,7 @@ struct FeaturesView: View {
                         }
                         Spacer()
                         Text(
-    currentScreen == 1 ? "Free Fire VN" :
-    currentScreen == 2 ? "AIM" :
-    currentScreen == 3 ? "MOD" : "ĐỊNH VỊ"
+    currentScreen == 1 ? "Free Fire VN" : "DANH SÁCH PATCH"
 ).font(.headline).foregroundStyle(.white)
                         Spacer()
                         Image(systemName: "chevron.left").opacity(0)
@@ -283,26 +281,12 @@ struct FeaturesView: View {
                                 .padding().background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 16)).overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.3), lineWidth: 0.5))
                             }.buttonStyle(.plain)
                         } else if currentScreen == 1 {
-    HStack(spacing: 10) {
-        menuButton(title: "AIM", icon: "scope") {
-            withAnimation { currentScreen = 2 }
-        }
-
-        menuButton(title: "MOD", icon: "puzzlepiece.extension") {
-            withAnimation { currentScreen = 3 }
-        }
-
-        menuButton(title: "ĐỊNH VỊ", icon: "mappin.and.ellipse") {
-            withAnimation { currentScreen = 4 }
-        }
-    }
-} else if currentScreen == 2 {
-    patchList(isAim: true)
-} else if currentScreen == 3 {
-    patchList(isAim: false)
-} else if currentScreen == 4 {
-    patchList(isAim: false, isLocation: true)
-}
+                            menuButton(title: "DANH SÁCH PATCH", icon: "square.grid.2x2") {
+                                withAnimation { currentScreen = 2 }
+                            }
+                        } else if currentScreen == 2 {
+                            patchList()
+                        }
                     }.padding(.horizontal, 18).padding(.bottom, 20)
                 }
             }
@@ -332,43 +316,24 @@ struct FeaturesView: View {
         }.buttonStyle(.plain)
     }
 
-    private func patchList(
-    isAim: Bool,
-    isLocation: Bool = false
-) -> some View {
+    private func patchList() -> some View {
         VStack(spacing: 10) {
-            if isLocation {
-    patchRow(
-        name: "ĐV Nhân Vật",
-        target: "FREE FIRE • VN",
-        package: "ĐV Nhân Vật.3105"
-    )
+            if patchStore.isBusy && patchStore.adminPatches.isEmpty {
+                ProgressView("Đang tải danh sách Patch…")
+                    .tint(.white)
+                    .foregroundStyle(.white)
+                    .padding(.vertical, 24)
+            } else if patchStore.adminPatches.isEmpty {
+                Text("Chưa có Patch đang bật trên Admin")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.75))
+                    .padding(.vertical, 24)
+            } else {
+                ForEach(patchStore.adminPatches) { patch in
+                    patchRow(patch: patch)
+                }
+            }
 
-    patchRow(
-        name: "ĐV Súng",
-        target: "FREE FIRE • VN",
-        package: "ĐV Súng.3105"
-    )
-
-} else if isAim {
-    patchRow(name: "Aim Drag", target: "FREE FIRE • VN", package: "Aim Drag.3105")
-    patchRow(name: "Aim Neck", target: "FREE FIRE • VN", package: "Aim Neck.3105")
-    patchRow(name: "Aim Body", target: "FREE FIRE • VN", package: "Aim Body.3105")
-    patchRow(name: "Nhe Tam", target: "FREE FIRE • VN", package: "Nhe Tam.3105")
-    patchRow(name: "Aim Chest", target: "FREE FIRE • VN", package: "Aim Chest.3105")
-    patchRow(name: "Aim R8", target: "FREE FIRE • VN", package: "Aim R8.3105")
-    patchRow(name: "Aim Magic", target: "FREE FIRE • VN", package: "Aim Magic.3105")
-    patchRow(name: "Neck Anten", target: "FREE FIRE • VN", package: "Neck Anten.3105")
-    patchRow(name: "Nhe Anten", target: "FREE FIRE • VN", package: "Nhe Anten.3105")
-
-} else {
-    patchRow(name: "Mod Sonic", target: "FREE FIRE • DIMITRI", package: "Mod Sonic Dimitri.3105")
-    patchRow(name: "Mod Thỏ", target: "FREE FIRE • DIMITRI", package: "Mod Thỏ Dimitri.3105")
-    patchRow(name: "Mod Roblox", target: "FREE FIRE • DIMITRI", package: "Mod Roblox Dimitri.3105")
-    patchRow(name: "Mod Báo Hồng", target: "FREE FIRE • DIMITRI", package: "Mod Báo Hồng Dimitri.3105")
-    patchRow(name: "Mod Baki", target: "FREE FIRE • ALOCK", package: "Mod Baki Alock.3105")
-}
-            
             HStack(spacing: 8) {
                 Circle().fill(patchStore.isBusy ? .orange : (patchStore.activePatchIDs.isEmpty ? .white.opacity(0.5) : .green)).frame(width: 7, height: 7)
                 Text(patchStore.isBusy ? "PROCESSING PATCH…" : (patchStore.activePatchIDs.isEmpty ? "READY -- SELECT A PATCH" : "PATCH APPLIED")).font(.system(size: 11, weight: .bold, design: .rounded)).foregroundStyle(.white.opacity(0.85))
@@ -376,111 +341,58 @@ struct FeaturesView: View {
         }
     }
 
-    /// Resolve the catalog package even when Project Library had to preserve an
-    /// older/user-owned file at the canonical name and seed the bundled copy as
-    /// "Name-2.3105" (or a later suffix).
-    /// Normalizes the visible catalog name and the name embedded in a package.
-    /// Admin uploads commonly include the target suffix (for example
-    /// "Aim Chest.3105"), while the encrypted project's internal name may not.
-    private func normalizedPatchName(_ value: String) -> String {
-        var name = value.trimmingCharacters(in: .whitespacesAndNewlines)
-            .precomposedStringWithCanonicalMapping
-        for suffix in [".3105", ".3106"] {
-            if name.lowercased().hasSuffix(suffix) {
-                name = String(name.dropLast(suffix.count))
-                break
-            }
-        }
-        return name
-            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "en_US_POSIX"))
-            .split(whereSeparator: \.isWhitespace)
-            .joined(separator: " ")
-    }
+    private func patchRow(patch: AdminPatch) -> some View {
+        let item = patchStore.items.first(where: { $0.id == patch.id })
+        let isEnabled = item.map { patchStore.activePatchIDs.contains($0.id) } ?? false
+        let targetLabel = patch.target == "3106" ? "FREE FIRE • 3106" : "FREE FIRE • 3105"
 
-    private func bundledPatchItem(named package: String) -> PatchLibraryItem? {
-        // Prefer the Admin's authoritative name-to-package-ID mapping. This
-        // does not depend on decrypting the package just to display its row.
-        if let remoteItem = patchStore.item(named: package) {
-            return remoteItem
-        }
-
-        let requestedURL = URL(fileURLWithPath: package)
-        let requestedExtension = requestedURL.pathExtension
-        let requestedStem = requestedURL.deletingPathExtension().lastPathComponent
-            .precomposedStringWithCanonicalMapping
-        let normalizedRequestedName = normalizedPatchName(requestedStem)
-
-        let candidates = patchStore.items.filter { item in
-            guard item.packageURL.pathExtension.caseInsensitiveCompare(requestedExtension) == .orderedSame else {
-                return false
-            }
-
-            // RemoteRelease files use UUID filenames. Resolve them using the
-            // decoded project name, allowing an optional ".3105"/".3106"
-            // suffix and harmless case/diacritic/spacing differences.
-            if let projectName = item.project?.name,
-               normalizedPatchName(projectName) == normalizedRequestedName {
-                return true
-            }
-
-            let stem = item.packageURL.deletingPathExtension().lastPathComponent
-                .precomposedStringWithCanonicalMapping
-            if normalizedPatchName(stem) == normalizedRequestedName {
-                return true
-            }
-            guard stem.count > requestedStem.count,
-                  stem.lowercased().hasPrefix(requestedStem.lowercased() + "-") else {
-                return false
-            }
-            let suffix = stem.dropFirst(requestedStem.count + 1)
-            return !suffix.isEmpty && suffix.allSatisfy(\.isNumber)
-        }
-
-        // Prefer the Worker Release version when names match; then prefer an
-        // exact filename over a legacy numbered duplicate.
-        return candidates.sorted { lhs, rhs in
-            let leftRemote = lhs.packageURL.lastPathComponent.hasPrefix("RemoteRelease-")
-            let rightRemote = rhs.packageURL.lastPathComponent.hasPrefix("RemoteRelease-")
-            if leftRemote != rightRemote { return leftRemote }
-
-            let leftExact = normalizedPatchName(lhs.packageURL.deletingPathExtension().lastPathComponent)
-                == normalizedRequestedName
-            let rightExact = normalizedPatchName(rhs.packageURL.deletingPathExtension().lastPathComponent)
-                == normalizedRequestedName
-            if leftExact != rightExact { return !leftExact }
-            return lhs.packageURL.lastPathComponent.localizedStandardCompare(rhs.packageURL.lastPathComponent) == .orderedAscending
-        }.first
-    }
-
-    private func patchRow(name: String, target: String, package: String) -> some View {
-        let item = bundledPatchItem(named: package)
-        let isEnabled = item.flatMap { patchStore.activePatchIDs.contains($0.id) } ?? false
-        
         return HStack(spacing: 12) {
-            Image(systemName: "scope").font(.system(size: 18, weight: .bold)).foregroundStyle(.white).frame(width: 40, height: 40).background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-            
+            Image(systemName: "scope")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 40, height: 40)
+                .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+
             VStack(alignment: .leading, spacing: 4) {
-                Text(name).font(.system(size: 16, weight: .black, design: .rounded)).foregroundStyle(.white)
-                Text(target).font(.system(size: 10, weight: .bold, design: .rounded)).foregroundStyle(.white.opacity(0.7))
+                Text(patch.name)
+                    .font(.system(size: 16, weight: .black, design: .rounded))
+                    .foregroundStyle(.white)
+                Text(targetLabel)
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.7))
                 if item == nil {
-                    Text("Thiếu gói patch -- kiểm tra mạng / Sandbox Diagnostics").font(.system(size: 9, weight: .semibold)).foregroundStyle(.red.opacity(0.9))
+                    Text("Chưa tải được gói Patch")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(.red.opacity(0.9))
                 }
             }
-            
+
             Spacer()
-            
+
             Button {
-                guard let item = item, !patchStore.isBusy else { return }
-                if isEnabled { patchStore.restorePatch(item) } else { patchStore.applyPatch(item) }
+                guard let item, !patchStore.isBusy else { return }
+                if isEnabled {
+                    patchStore.restorePatch(item)
+                } else {
+                    patchStore.applyPatch(item)
+                }
             } label: {
                 ZStack {
                     Capsule().fill(isEnabled ? Color.white : Color.white.opacity(0.2)).frame(width: 50, height: 30)
                     Circle().fill(isEnabled ? Color.black : Color.white).frame(width: 24, height: 24).offset(x: isEnabled ? 10 : -10).shadow(radius: 2)
                 }
-            }.buttonStyle(.plain).disabled(patchStore.isBusy || item == nil)
+            }
+            .buttonStyle(.plain)
+            .disabled(patchStore.isBusy || item == nil)
         }
-        .padding(.horizontal, 14).padding(.vertical, 12).background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 16, style: .continuous)).overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.white.opacity(0.3), lineWidth: 0.5)).opacity(patchStore.isBusy ? 0.5 : 1)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.white.opacity(0.3), lineWidth: 0.5))
+        .opacity(patchStore.isBusy ? 0.5 : 1)
     }
+
+
 }
 
 // MARK: - CÀI ĐẶT
