@@ -47,20 +47,27 @@ final class PatchProjectStore: ObservableObject {
 
     private var pendingUnlock: PendingUnlock?
 
-    init() {
-        if let saved = UserDefaults.standard.array(forKey: "com.tiendat.develop.activePatchIDs") as? [String] {
-            self.activePatchIDs = Set(saved.compactMap { UUID(uuidString: $0) })
-        }
-        isBusy = true
-        PatchProjectLibrary.bootstrap()
-        
-        Task { @MainActor in
-            await downloadPatchesFromGithub()
-            self.items = PatchProjectLibrary.load()
-            self.updateLoadIssues()
-            self.isBusy = false
-        }
+    init(licenseManager: LicenseManager) {
+    self.licenseManager = licenseManager
+
+    if let saved = UserDefaults.standard.array(
+        forKey: "com.tiendat.develop.activePatchIDs"
+    ) as? [String] {
+        self.activePatchIDs = Set(
+            saved.compactMap { UUID(uuidString: $0) }
+        )
     }
+
+    isBusy = true
+    PatchProjectLibrary.bootstrap()
+
+    Task { @MainActor in
+        await downloadPatchesFromGithub()
+        self.items = PatchProjectLibrary.load()
+        self.updateLoadIssues()
+        self.isBusy = false
+    }
+}
 
     private var remotePackageNames: [String] {
         [
