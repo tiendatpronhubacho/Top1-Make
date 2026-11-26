@@ -194,6 +194,7 @@ final class PatchProjectStore: ObservableObject {
         var failures: [String] = []
         var availablePatches: [AdminPatch] = []
         var latestPatches: [UUID: WorkerPatch] = [:]
+        var seenRemoteNames = Set<String>()
 
         // Fetch both target lists concurrently instead of waiting for 3105 then 3106.
         async let list3105 = workerPatchListResult(target: "3105")
@@ -213,6 +214,11 @@ final class PatchProjectStore: ObservableObject {
                         failures.append("\(patch.name): metadata Worker không hợp lệ")
                         continue
                     }
+                    // The first row for a name+target is authoritative. This also
+                    // prevents legacy duplicate Worker rows from creating two UI entries
+                    // that would point at the same name-based local cache.
+                    let nameKey = remotePatchKey(name: patch.name, target: patch.target)
+                    guard seenRemoteNames.insert(nameKey).inserted else { continue }
                     latestPatches[patchUUID] = patch
                     availablePatches.append(
                         AdminPatch(id: patchUUID, name: patch.name, target: patch.target)
