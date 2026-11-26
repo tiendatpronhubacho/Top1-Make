@@ -21,6 +21,12 @@ struct PatchStoreAlert: Identifiable {
     }
 }
 
+struct AdminPatch: Identifiable, Hashable {
+    let id: UUID
+    let name: String
+    let target: String
+}
+
 private struct WorkerPatchList: Decodable {
     let ok: Bool?
     let patches: [WorkerPatch]
@@ -38,6 +44,7 @@ private struct WorkerPatch: Decodable {
 final class PatchProjectStore: ObservableObject {
     private let licenseManager: LicenseManager
     @Published private(set) var items: [PatchLibraryItem] = []
+    @Published private(set) var adminPatches: [AdminPatch] = []
     @Published private(set) var isBusy = false
     @Published private(set) var loadIssues: [String] = []
     @Published var passwordRequest: PatchPasswordRequest?
@@ -150,6 +157,8 @@ final class PatchProjectStore: ObservableObject {
     /// Only packages returned by the Admin-controlled Worker list are downloaded.
     private func downloadPatchesFromWorker() async -> [String] {
         var failures: [String] = []
+        var availablePatches: [AdminPatch] = []
+        workerPatchesByID.removeAll()
         guard let rootURL = try? PatchProjectLibrary.packageRootURL() else {
             return ["Worker Patch: không tạo được thư mục lưu package"]
         }
@@ -165,6 +174,7 @@ final class PatchProjectStore: ObservableObject {
                         continue
                     }
                     workerPatchesByID[patchUUID] = patch
+                    availablePatches.append(AdminPatch(id: patchUUID, name: patch.name, target: patch.target))
 
                     let destination = rootURL.appendingPathComponent(
                         "RemoteRelease-\(patchUUID.uuidString).\(target)"
@@ -200,6 +210,7 @@ final class PatchProjectStore: ObservableObject {
                 log("patch: Worker list failed target=\(target): \(error)")
             }
         }
+        adminPatches = availablePatches.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         return failures
     }
 
