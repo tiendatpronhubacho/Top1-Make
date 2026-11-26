@@ -149,7 +149,7 @@ final class PatchProjectStore: ObservableObject {
         Task { @MainActor [weak self] in
             do {
                 _ = try await Task.detached(priority: .userInitiated) {
-                    try DevicePatchService.apply(project: project)
+                    try DevicePatchService.apply(project: project, licenseManager: licenseManager)
                 }.value
                 
                 guard let self = self else { return }
