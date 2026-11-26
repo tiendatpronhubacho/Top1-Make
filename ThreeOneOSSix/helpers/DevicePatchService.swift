@@ -4,11 +4,15 @@ enum DevicePatchService {
     @MainActor
 static func apply(
     project: PatchProject,
-    licenseManager: LicenseManager
+    licenseManager: LicenseManager,
+    authorizationAlreadyValidated: Bool = false
 ) async throws -> PatchTransactionReceipt {
 
-    // Xác thực License trên máy chủ trước khi ghi Patch.
-    try await licenseManager.authorizePatch(action: "patch_apply")
+    // The caller may run the Worker enable-check and License authorization
+    // concurrently. Keep the default secure path for every other caller.
+    if !authorizationAlreadyValidated {
+        try await licenseManager.authorizePatch(action: "patch_apply")
+    }
 
     let bundleIDs = orderedBundleIdentifiers(in: project)
 
