@@ -433,7 +433,15 @@ func applyPatch(_ item: PatchLibraryItem) {
         guard let self else { return }
 
         do {
-            guard try await self.isWorkerPatchEnabled(item) else {
+            // Run the live Admin-enabled check and signed License authorization
+            // at the same time, rather than waiting for two network round trips in series.
+            async let enabledCheck = self.isWorkerPatchEnabled(item)
+            async let licenseAuthorization: Void = self.licenseManager.authorizePatch(
+                action: "patch_apply"
+            )
+            let (isEnabled, _) = try await (enabledCheck, licenseAuthorization)
+
+            guard isEnabled else {
                 throw NSError(
                     domain: "WorkerPatchAuthorization",
                     code: 403,
@@ -442,7 +450,8 @@ func applyPatch(_ item: PatchLibraryItem) {
             }
             _ = try await DevicePatchService.apply(
                 project: project,
-                licenseManager: self.licenseManager
+                licenseManager: self.licenseManager,
+                authorizationAlreadyValidated: true
             )
 
             self.activePatchIDs.insert(itemID)
