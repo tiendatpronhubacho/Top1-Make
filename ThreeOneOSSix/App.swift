@@ -238,6 +238,12 @@ private struct LicenseResult: Decodable {
     let error: String?
 }
 
+private struct PatchDownloadAuthorization: Decodable {
+    let ok: Bool
+    let ticket: String?
+    let error: String?
+}
+
 @MainActor
 final class LicenseManager: ObservableObject {
     @Published private(set) var isLicensed = false
@@ -384,6 +390,57 @@ func authorizePatch(action: String) async throws {
         )
     }
 }
+
+    /// Downloads a Release asset using a device-bound, one-use Worker ticket.
+    func downloadPatchData(patchID: String) async throws -> Data {
+        guard isLicensed else { throw LicenseFailure.server("license_invalid") }
+        guard let key = try keychainRead(account: LicenseConfig.licenseAccount), !key.isEmpty else {
+            isLicensed = false
+            throw LicenseFailure.server("license_invalid")
+        }
+
+        let id = try getOrCreateDeviceID()
+        deviceID = id
+        let signingKey = try getOrCreateSigningKey()
+        let challenge = try await requestChallenge(deviceID: id, action: "patch_download")
+        let message = canonical(challenge: challenge, action: "patch_download", deviceID: id, licenseKey: key)
+        let signature = try signingKey.signature(for: Data(message.utf8))
+            .rawRepresentation.base64EncodedString()
+
+        let authorization: PatchDownloadAuthorization = try await post(
+            "/v2/patch/authorize-download",
+            payload: [
+                "deviceId": id,
+                "licenseKey": key,
+                "patchId": patchID,
+                "challenge": challenge,
+                "signature": signature
+            ]
+        )
+        guard authorization.ok, let ticket = authorization.ticket, !ticket.isEmpty else {
+            throw LicenseFailure.server(authorization.error ?? "patch_authorization_denied")
+        }
+
+        guard let url = URL(string: "/v2/patch/download", relativeTo: LicenseConfig.baseURL) else {
+            throw LicenseFailure.network
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 90
+        request.setValue(ticket, forHTTPHeaderField: "X-Download-Ticket")
+        request.setValue(id, forHTTPHeaderField: "X-Device-Id")
+        request.setValue("application/octet-stream", forHTTPHeaderField: "Accept")
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw LicenseFailure.network }
+        guard (200..<300).contains(http.statusCode) else {
+            let apiError = (try? JSONDecoder().decode(LicenseResult.self, from: data))?.error
+                ?? "patch_download_http_\(http.statusCode)"
+            throw LicenseFailure.server(apiError)
+        }
+        guard !data.isEmpty else { throw LicenseFailure.server("patch_download_empty") }
+        return data
+    }
 
     func deactivateLocalKey() {
         try? keychainDelete(account: LicenseConfig.licenseAccount)
