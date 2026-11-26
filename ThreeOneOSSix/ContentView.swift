@@ -242,6 +242,37 @@ struct FeaturesView: View {
     @Environment(\.scenePhase) private var scenePhase
     @ObservedObject var patchStore: PatchProjectStore
     @State private var currentScreen = 0
+    @State private var selectedCategory: PatchCategory = .aim
+
+    private enum PatchCategory: String, CaseIterable {
+        case aim = "AIM"
+        case mod = "MOD"
+        case location = "ĐỊNH VỊ"
+
+        var title: String { rawValue }
+        var icon: String {
+            switch self {
+            case .aim: return "scope"
+            case .mod: return "slider.horizontal.3"
+            case .location: return "location.fill"
+            }
+        }
+    }
+
+    private func category(for patch: AdminPatch) -> PatchCategory {
+        let name = patch.name.folding(
+            options: [.caseInsensitive, .diacriticInsensitive],
+            locale: Locale(identifier: "vi_VN")
+        ).lowercased()
+
+        if ["dinh vi", "dv nhan vat", "dv sung", "location", "teleport", "position"].contains(where: { name.contains($0) }) {
+            return .location
+        }
+        if ["aim", "aimbot", "headshot", "aimlock", "tam"].contains(where: { name.contains($0) }) {
+            return .aim
+        }
+        return .mod
+    }
 
     var body: some View {
         ZStack {
@@ -256,13 +287,12 @@ struct FeaturesView: View {
                 if currentScreen > 0 {
                     HStack {
                         Button { withAnimation { currentScreen -= 1 } } label: {
-                            HStack(spacing: 6) { Image(systemName: "chevron.left"); Text(currentScreen == 1 ? "Chức năng" : "Menu") }
+                            HStack(spacing: 6) { Image(systemName: "chevron.left"); Text(currentScreen == 1 ? "Chức năng" : "Danh mục") }
                                 .font(.system(size: 16, weight: .bold)).foregroundStyle(.white)
                         }
                         Spacer()
-                        Text(
-    currentScreen == 1 ? "Free Fire VN" : "DANH SÁCH PATCH"
-).font(.headline).foregroundStyle(.white)
+                        Text(currentScreen == 1 ? "Free Fire VN" : selectedCategory.title)
+                            .font(.headline).foregroundStyle(.white)
                         Spacer()
                         Image(systemName: "chevron.left").opacity(0)
                     }.padding(.horizontal, 20).padding(.top, 10).padding(.bottom, 20)
@@ -281,8 +311,10 @@ struct FeaturesView: View {
                                 .padding().background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 16)).overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.3), lineWidth: 0.5))
                             }.buttonStyle(.plain)
                         } else if currentScreen == 1 {
-                            menuButton(title: "DANH SÁCH PATCH", icon: "square.grid.2x2") {
-                                withAnimation { currentScreen = 2 }
+                            VStack(spacing: 14) {
+                                categoryButton(.aim)
+                                categoryButton(.mod)
+                                categoryButton(.location)
                             }
                         } else if currentScreen == 2 {
                             patchList()
@@ -309,6 +341,38 @@ struct FeaturesView: View {
         }
     }
 
+    private func categoryButton(_ category: PatchCategory) -> some View {
+        let count = patchStore.adminPatches.filter { self.category(for: $0) == category }.count
+        return Button {
+            selectedCategory = category
+            withAnimation { currentScreen = 2 }
+        } label: {
+            HStack(spacing: 14) {
+                Image(systemName: category.icon)
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 48, height: 48)
+                    .background(Color.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 13))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(category.title)
+                        .font(.system(size: 17, weight: .black, design: .rounded))
+                        .foregroundStyle(.white)
+                    Text("\(count) PATCH")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.65))
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .foregroundStyle(.white.opacity(0.65))
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity)
+            .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 18))
+            .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.white.opacity(0.3), lineWidth: 0.5))
+        }
+        .buttonStyle(.plain)
+    }
+
     private func menuButton(title: String, icon: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: 12) { Image(systemName: icon).font(.system(size: 30)).foregroundStyle(.white); Text(title).font(.headline).foregroundStyle(.white) }
@@ -329,8 +393,18 @@ struct FeaturesView: View {
                     .foregroundStyle(.white.opacity(0.75))
                     .padding(.vertical, 24)
             } else {
-                ForEach(patchStore.adminPatches) { patch in
-                    patchRow(patch: patch)
+                let filteredPatches = patchStore.adminPatches.filter {
+                    category(for: $0) == selectedCategory
+                }
+                if filteredPatches.isEmpty {
+                    Text("Chưa có Patch thuộc mục này")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.75))
+                        .padding(.vertical, 24)
+                } else {
+                    ForEach(filteredPatches) { patch in
+                        patchRow(patch: patch)
+                    }
                 }
             }
 
