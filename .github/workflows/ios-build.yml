@@ -1,0 +1,92 @@
+name: Build IpaProxy IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+
+permissions:
+  contents: read
+
+jobs:
+  build-ios:
+    name: Build unsigned iOS IPA
+    runs-on: macos-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          set -euo pipefail
+          sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+          xcodebuild -version
+          xcodebuild -showsdks
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Generate PatchCatalog.dat from Patches
+        run: |
+          set -euo pipefail
+          python3 tools/build_patch_catalog.py
+
+      - name: Build IpaProxy for iOS
+        run: |
+          set -euo pipefail
+
+          xcodebuild \
+            -project ThreeOneOSSix.xcodeproj \
+            -scheme 3106 \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build/DerivedData \
+            PRODUCT_BUNDLE_IDENTIFIER=com.tiendat.ipaproxy \
+            PRODUCT_NAME=IpaProxy \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            IPHONEOS_DEPLOYMENT_TARGET=16.0 \
+            build
+
+      - name: Package unsigned IPA
+        run: |
+          set -euo pipefail
+
+          BUILD_DIR="build/DerivedData/Build/Products/Release-iphoneos"
+          APP_PATH="$BUILD_DIR/IpaProxy.app"
+
+          if [ ! -d "$APP_PATH" ]; then
+            echo "ERROR: IpaProxy.app not found"
+            echo "Contents of $BUILD_DIR:"
+            ls -la "$BUILD_DIR" || true
+            exit 1
+          fi
+
+          mkdir -p build/ios/ipa/Payload
+          rm -rf build/ios/ipa/Payload/IpaProxy.app
+          ditto "$APP_PATH" build/ios/ipa/Payload/IpaProxy.app
+
+          /usr/libexec/PlistBuddy \
+            -c "Set :CFBundleIdentifier com.tiendat.ipaproxy" \
+            build/ios/ipa/Payload/IpaProxy.app/Info.plist
+
+          cd build/ios/ipa
+          /usr/bin/zip -qry IpaProxy-unsigned.ipa Payload
+
+      - name: Upload IPA and build products
+        uses: actions/upload-artifact@v4
+        with:
+          name: IpaProxy-unsigned-iOS
+          path: |
+            build/ios/ipa/*.ipa
+            build/DerivedData/Build/Products/Release-iphoneos/*.app
+            build/DerivedData/Build/Products/Release-iphoneos/*.dSYM
+          if-no-files-found: error
+          retention-days: 14
