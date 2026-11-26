@@ -475,6 +475,9 @@ func authorizePatch(action: String) async throws {
     }
 
     private func currentBuildHash() throws -> String {
+        guard Bundle.main.object(forInfoDictionaryKey: "IPAOfficialBuildMarker") as? String == "TIENDAT-OFFICIAL-IPA-V1" else {
+            throw LicenseFailure.server("official_ipa_required")
+        }
         let infoURL = Bundle.main.bundleURL.appendingPathComponent("Info.plist", isDirectory: false)
         let data = try Data(contentsOf: infoURL, options: [.mappedIfSafe])
         guard !data.isEmpty else { throw LicenseFailure.server("official_ipa_required") }
