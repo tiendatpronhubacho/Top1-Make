@@ -255,6 +255,9 @@ final class PatchProjectStore: ObservableObject {
                     if !Task.isCancelled {
                         log("patch: background prefetch skipped \(patch.name): \(error)")
                     }
+                    if self.prioritizedPrefetchPatchID == patch.id {
+                        break
+                    }
                 }
                 self.prefetchingPatchID = nil
             }
