@@ -77,32 +77,50 @@ final class PatchProjectStore: ObservableObject {
 
     Task { @MainActor in
         await downloadPatchesFromGithub()
-        self.items = PatchProjectLibrary.load()
+        self.items = PatchProjectLibrary.load().filter { self.isWorkerManagedPackage($0) }
         self.updateLoadIssues()
         self.isBusy = false
     }
 }
 
-    private var remotePackageNames: [String] {
-        [
-            "Aim Drag.3105", "Aim Neck.3105", "Aim Body.3105",
-            "Nhe Tam.3105", "Aim Chest.3105", "Aim R8.3105",
-            "Aim Magic.3105", "Neck Anten.3105", "Nhe Anten.3105",
-            "Mod Sonic Dimitri.3105", "Mod Thỏ Dimitri.3105", "Mod Roblox Dimitri.3105",
-            "Mod Báo Hồng Dimitri.3105", "Mod Baki Alock.3105",
-            "ĐV Nhân Vật.3105",
-"ĐV Súng.3105"
+    private func isWorkerManagedPackage(_ item: PatchLibraryItem) -> Bool {
+        item.packageURL.lastPathComponent.hasPrefix("RemoteRelease-")
+    }
+
+    private func workerPatchList(target: String) async throws -> [WorkerPatch] {
+        guard let baseURL = URL(string: "https://ipa-device-server.dat1888haizz.workers.dev/v2/patches"),
+              var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false) else {
+            throw NSError(domain: "WorkerPatchList", code: -1,
+                          userInfo: [NSLocalizedDescriptionKey: "URL không hợp lệ"])
+        }
+        components.queryItems = [
+            URLQueryItem(name: "target", value: target),
+            URLQueryItem(name: "channel", value: "stable")
         ]
+        guard let url = components.url else {
+            throw NSError(domain: "WorkerPatchList", code: -1,
+                          userInfo: [NSLocalizedDescriptionKey: "URL không hợp lệ"])
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 25
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse,
+              (200..<300).contains(http.statusCode) else {
+            let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+            throw NSError(domain: "WorkerPatchList", code: status,
+                          userInfo: [NSLocalizedDescriptionKey: "HTTP \(status)"])
+        }
+        return try JSONDecoder().decode(WorkerPatchList.self, from: data).patches
     }
 
     private func downloadPatchesFromGithub() async {
-        var failures = await downloadPatchesFromWorker()
-        failures.append(contentsOf: await downloadLegacyPatches())
-        loadIssues = failures
+        loadIssues = await downloadPatchesFromWorker()
     }
 
-    /// Fetches active Release patches through the Worker. UUID-based local names
-    /// prevent remote assets from overwriting user-created or bundled packages.
+    /// Only packages returned by the Admin-controlled Worker list are downloaded.
     private func downloadPatchesFromWorker() async -> [String] {
         var failures: [String] = []
         guard let rootURL = try? PatchProjectLibrary.packageRootURL() else {
@@ -110,34 +128,9 @@ final class PatchProjectStore: ObservableObject {
         }
 
         for target in ["3105", "3106"] {
-            var components = URLComponents(
-                url: URL(string: "https://ipa-device-server.dat1888haizz.workers.dev/v2/patches")!,
-                resolvingAgainstBaseURL: false
-            )
-            components?.queryItems = [
-                URLQueryItem(name: "target", value: target),
-                URLQueryItem(name: "channel", value: "stable")
-            ]
-            guard let url = components?.url else {
-                failures.append("Worker Patch \(target): URL không hợp lệ")
-                continue
-            }
-
             do {
-                var request = URLRequest(url: url)
-                request.httpMethod = "GET"
-                request.timeoutInterval = 25
-                request.setValue("application/json", forHTTPHeaderField: "Accept")
-                let (data, response) = try await URLSession.shared.data(for: request)
-                guard let http = response as? HTTPURLResponse,
-                      (200..<300).contains(http.statusCode) else {
-                    let status = (response as? HTTPURLResponse)?.statusCode ?? -1
-                    throw NSError(domain: "WorkerPatchList", code: status,
-                                  userInfo: [NSLocalizedDescriptionKey: "HTTP \(status)"])
-                }
-
-                let listing = try JSONDecoder().decode(WorkerPatchList.self, from: data)
-                for patch in listing.patches {
+                let patches = try await workerPatchList(target: target)
+                for patch in patches {
                     guard patch.target == target,
                           let patchUUID = UUID(uuidString: patch.id),
                           patch.sha256.count == 64 else {
@@ -168,7 +161,7 @@ final class PatchProjectStore: ObservableObject {
                         }
                         _ = try PatchPackageCodec.inspect(packageData)
                         try packageData.write(to: destination, options: [.atomic, .completeFileProtection])
-                        log("patch: downloaded Worker Release \(patch.name) target=\(target) sha256=\(actualHash)")
+                        log("patch: downloaded Admin Worker patch \(patch.name) target=\(target) sha256=\(actualHash)")
                     } catch {
                         failures.append("\(patch.name): \(error.localizedDescription)")
                         log("patch: Worker Release download failed -- \(patch.name): \(error)")
@@ -182,64 +175,45 @@ final class PatchProjectStore: ObservableObject {
         return failures
     }
 
-    /// Keeps compatibility with older packages published in the repository's Patches/ folder.
-    private func downloadLegacyPatches() async -> [String] {
-        let fm = FileManager.default
-        guard let rootURL = try? PatchProjectLibrary.packageRootURL() else {
-            return ["Không tạo được thư mục Application Support/PatchProjects"]
+    /// Re-check the Admin's live enabled list immediately before every apply.
+    /// A cached package is never sufficient authorization to activate a patch.
+    private func isWorkerPatchEnabled(_ item: PatchLibraryItem) async throws -> Bool {
+        let filename = item.packageURL.lastPathComponent
+        let stem = item.packageURL.deletingPathExtension().lastPathComponent
+        let prefix = "RemoteRelease-"
+        guard stem.hasPrefix(prefix),
+              let remoteID = UUID(uuidString: String(stem.dropFirst(prefix.count))),
+              ["3105", "3106"].contains(item.packageURL.pathExtension) else {
+            return false
         }
-        let baseURL = "https://raw.githubusercontent.com/tiendatpronhubacho/Top1-Make/refs/heads/main/Patches/"
-        var failures: [String] = []
 
-        for filename in remotePackageNames {
-            let destination = rootURL.appendingPathComponent(filename)
-            if fm.fileExists(atPath: destination.path),
-               let existing = try? Data(contentsOf: destination),
-               (try? PatchPackageCodec.inspect(existing)) != nil { continue }
-
-            try? fm.removeItem(at: destination)
-            let allowed = CharacterSet.urlPathAllowed.subtracting(CharacterSet(charactersIn: "/?#"))
-            guard let encoded = filename.addingPercentEncoding(withAllowedCharacters: allowed),
-                  let url = URL(string: baseURL + encoded) else {
-                failures.append("\(filename): URL không hợp lệ")
-                continue
-            }
-            do {
-                var request = URLRequest(url: url)
-                request.timeoutInterval = 25
-                let (data, response) = try await URLSession.shared.data(for: request)
-                guard let http = response as? HTTPURLResponse,
-                      (200..<300).contains(http.statusCode) else {
-                    let status = (response as? HTTPURLResponse)?.statusCode ?? -1
-                    throw NSError(domain: "PatchDownload", code: status,
-                                  userInfo: [NSLocalizedDescriptionKey: "HTTP \(status)"])
-                }
-                _ = try PatchPackageCodec.inspect(data)
-                try data.write(to: destination, options: .atomic)
-                log("patch: downloaded and validated legacy package \(filename)")
-            } catch {
-                failures.append("\(filename): \(error.localizedDescription)")
-                log("patch: legacy download/validation failed -- \(filename): \(error)")
-            }
+        let target = item.packageURL.pathExtension
+        let patches = try await workerPatchList(target: target)
+        guard let patch = patches.first(where: {
+            UUID(uuidString: $0.id) == remoteID && $0.target == target
+        }) else {
+            log("patch: activation denied; Admin has disabled or removed \(filename)")
+            return false
         }
-        return failures
+
+        let data = try Data(contentsOf: item.packageURL)
+        let actualHash = SHA256.hash(data: data)
+            .map { String(format: "%02x", $0) }.joined()
+        guard actualHash.caseInsensitiveCompare(patch.sha256) == .orderedSame else {
+            log("patch: activation denied; cached package hash mismatch \(filename)")
+            return false
+        }
+        _ = try PatchPackageCodec.inspect(data)
+        return true
     }
 
     private func updateLoadIssues() {
-        let loaded = Set(items.map { $0.packageURL.lastPathComponent })
-        let absent = remotePackageNames.filter { !loaded.contains($0) }
-        if !absent.isEmpty {
-            let existing = Set(loadIssues)
-            loadIssues.append(contentsOf: absent.filter { name in
-                !existing.contains(where: { $0.hasPrefix(name + ":") })
-            }.map { "\($0): gói không có hoặc không giải mã được" })
-        }
         loadIssues = Array(Set(loadIssues)).sorted()
     }
 
     func reload() {
         PatchProjectLibrary.bootstrap()
-        items = PatchProjectLibrary.load()
+        items = PatchProjectLibrary.load().filter { isWorkerManagedPackage($0) }
         updateLoadIssues()
     }
 
@@ -261,6 +235,13 @@ func applyPatch(_ item: PatchLibraryItem) {
         guard let self else { return }
 
         do {
+            guard try await self.isWorkerPatchEnabled(item) else {
+                throw NSError(
+                    domain: "WorkerPatchAuthorization",
+                    code: 403,
+                    userInfo: [NSLocalizedDescriptionKey: "Patch chưa được bật hoặc đã bị tắt trên Admin"]
+                )
+            }
             _ = try await DevicePatchService.apply(
                 project: project,
                 licenseManager: self.licenseManager
