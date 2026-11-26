@@ -265,13 +265,25 @@ struct FeaturesView: View {
             locale: Locale(identifier: "vi_VN")
         ).lowercased()
 
-        if ["dinh vi", "dv nhan vat", "dv sung", "location", "teleport", "position"].contains(where: { name.contains($0) }) {
+        // Các patch Định vị luôn được xếp vào đúng mục ĐỊNH VỊ.
+        if ["dinh vi", "dv nhan vat", "dv nhan", "dv sung", "location", "teleport", "position"].contains(where: { name.contains($0) }) {
             return .location
         }
-        if ["aim", "aimbot", "headshot", "aimlock", "tam"].contains(where: { name.contains($0) }) {
+
+        // Nhe Anten và Neck Anten là patch AIM, không phải MOD.
+        if ["aim", "aimbot", "headshot", "aimlock", "tam", "body", "anten", "neck"].contains(where: { name.contains($0) }) {
             return .aim
         }
+
         return .mod
+    }
+
+    private func displayPatchName(_ name: String) -> String {
+        let suffix = ".3105"
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.hasSuffix(suffix)
+            ? String(trimmed.dropLast(suffix.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+            : trimmed
     }
 
     var body: some View {
@@ -436,7 +448,7 @@ struct FeaturesView: View {
                 .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(patch.name)
+                Text(displayPatchName(patch.name))
                     .font(.system(size: 16, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
                 if item == nil {
