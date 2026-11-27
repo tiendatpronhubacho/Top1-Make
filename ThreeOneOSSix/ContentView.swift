@@ -438,8 +438,8 @@ struct FeaturesView: View {
     }
 
     private func patchRow(patch: AdminPatch, displayName: String) -> some View {
-        let item = patchStore.items.first(where: { $0.id == patch.id })
-        let isEnabled = item.map { patchStore.activePatchIDs.contains($0.id) } ?? false
+        let item = patchStore.localItem(for: patch)
+        let isEnabled = patchStore.isPatchActive(patch)
 
         return HStack(spacing: 12) {
             Image(systemName: "scope")
