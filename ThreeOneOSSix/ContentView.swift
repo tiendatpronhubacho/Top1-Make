@@ -127,6 +127,7 @@ struct ContentView: View {
 // MARK: - MAIN CONTENT VIEW (3 TAB TIẾN ĐẠT)
 private struct LicensedContentView: View {
     @EnvironmentObject private var appState: AppState
+    @ObservedObject private var remoteTheme = RemoteAppTheme.shared
 
     @StateObject private var patchStore: PatchProjectStore
     @State private var selectedTab = 0
