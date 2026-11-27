@@ -475,13 +475,17 @@ func authorizePatch(action: String) async throws {
     }
 
     private func currentBuildHash() throws -> String {
-        guard Bundle.main.object(forInfoDictionaryKey: "IPAOfficialBuildMarker") as? String == "TIENDAT-OFFICIAL-IPA-V1" else {
+        guard Bundle.main.object(forInfoDictionaryKey: "IPAOfficialBuildMarker") as? String == "TIENDAT-OFFICIAL-IPA-V1",
+              let storedID = Bundle.main.object(forInfoDictionaryKey: "IPAOfficialBuildID") as? String,
+              storedID.hasPrefix("TIENDAT-OFFICIAL-BUILD-ID:") else {
             throw LicenseFailure.server("official_ipa_required")
         }
-        let infoURL = Bundle.main.bundleURL.appendingPathComponent("Info.plist", isDirectory: false)
-        let data = try Data(contentsOf: infoURL, options: [.mappedIfSafe])
-        guard !data.isEmpty else { throw LicenseFailure.server("official_ipa_required") }
-        return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+        let rawID = String(storedID.dropFirst("TIENDAT-OFFICIAL-BUILD-ID:".count)).lowercased()
+        guard let buildID = UUID(uuidString: rawID) else {
+            throw LicenseFailure.server("official_ipa_required")
+        }
+        let canonicalID = buildID.uuidString.lowercased()
+        return SHA256.hash(data: Data(canonicalID.utf8)).map { String(format: "%02x", $0) }.joined()
     }
 
     private func canonical(challenge: String, action: String, deviceID: String, licenseKey: String, buildHash: String) -> String {
