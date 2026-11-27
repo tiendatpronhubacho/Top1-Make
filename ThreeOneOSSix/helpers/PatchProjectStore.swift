@@ -161,23 +161,19 @@ final class PatchProjectStore: ObservableObject {
     }
 
     private func currentOfficialBuildHash() throws -> String {
-        guard Bundle.main.object(forInfoDictionaryKey: "IPAOfficialBuildMarker") as? String == "TIENDAT-OFFICIAL-IPA-V1" else {
-            throw NSError(
-                domain: "WorkerPatchList",
-                code: 403,
-                userInfo: [NSLocalizedDescriptionKey: "IPA chưa được Admin duyệt"]
-            )
+        guard Bundle.main.object(forInfoDictionaryKey: "IPAOfficialBuildMarker") as? String == "TIENDAT-OFFICIAL-IPA-V1",
+              let storedID = Bundle.main.object(forInfoDictionaryKey: "IPAOfficialBuildID") as? String,
+              storedID.hasPrefix("TIENDAT-OFFICIAL-BUILD-ID:") else {
+            throw NSError(domain: "WorkerPatchList", code: 403,
+                          userInfo: [NSLocalizedDescriptionKey: "IPA chưa có mã định danh chính thức"])
         }
-        let infoURL = Bundle.main.bundleURL.appendingPathComponent("Info.plist", isDirectory: false)
-        let data = try Data(contentsOf: infoURL, options: [.mappedIfSafe])
-        guard !data.isEmpty else {
-            throw NSError(
-                domain: "WorkerPatchList",
-                code: 403,
-                userInfo: [NSLocalizedDescriptionKey: "Không đọc được Info.plist của IPA"]
-            )
+        let rawID = String(storedID.dropFirst("TIENDAT-OFFICIAL-BUILD-ID:".count)).lowercased()
+        guard let buildID = UUID(uuidString: rawID) else {
+            throw NSError(domain: "WorkerPatchList", code: 403,
+                          userInfo: [NSLocalizedDescriptionKey: "Mã định danh IPA không hợp lệ"])
         }
-        return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+        let canonicalID = buildID.uuidString.lowercased()
+        return SHA256.hash(data: Data(canonicalID.utf8)).map { String(format: "%02x", $0) }.joined()
     }
 
     private func workerPatchList(target: String) async throws -> [WorkerPatch] {
