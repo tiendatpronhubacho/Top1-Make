@@ -25,6 +25,7 @@ struct AdminPatch: Identifiable, Hashable {
     let id: UUID
     let name: String
     let target: String
+    let category: String
 }
 
 private struct WorkerPatchList: Decodable {
@@ -37,6 +38,7 @@ private struct WorkerPatch: Decodable {
     let id: String
     let name: String
     let target: String
+    let category: String?
     let sha256: String
 }
 
@@ -251,7 +253,7 @@ final class PatchProjectStore: ObservableObject {
                     guard seenRemoteNames.insert(nameKey).inserted else { continue }
                     latestPatches[patchUUID] = patch
                     availablePatches.append(
-                        AdminPatch(id: patchUUID, name: patch.name, target: patch.target)
+                        AdminPatch(id: patchUUID, name: patch.name, target: patch.target, category: patch.category ?? "legacy")
                     )
                 }
             case .failure(let error):
