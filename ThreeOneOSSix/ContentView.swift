@@ -315,7 +315,16 @@ struct HomeView: View {
 // MARK: - TRANG CHỨC NĂNG
 struct FeaturesView: View {
     @Environment(\.scenePhase) private var scenePhase
+    @ObservedObject private var remoteTheme = RemoteAppTheme.shared
     @ObservedObject var patchStore: PatchProjectStore
+
+    private var themeCardOpacity: Double {
+        min(0.5, max(0.05, remoteTheme.config.cardOpacity ?? 0.1))
+    }
+
+    private var themeAccent: Color {
+        Color(remoteHex: remoteTheme.config.accent)
+    }
     @State private var currentScreen = 0
     @State private var selectedCategory: PatchCategory = .aim
 
@@ -373,10 +382,21 @@ struct FeaturesView: View {
         ZStack {
             Color.black.ignoresSafeArea()
             GeometryReader { proxy in
-                loadImageFromBundle(named: "background_features")
-                    .resizable().scaledToFill()
-                    .frame(width: proxy.size.width, height: proxy.size.height).clipped()
-            }.ignoresSafeArea().overlay(Color.black.opacity(0.4))
+                Group {
+                    if let raw = remoteTheme.config.backgroundURL,
+                       let url = URL(string: raw), url.scheme == "https" {
+                        AsyncImage(url: url) { image in
+                            image.resizable().scaledToFill()
+                        } placeholder: {
+                            loadImageFromBundle(named: "background_features").resizable().scaledToFill()
+                        }
+                    } else {
+                        loadImageFromBundle(named: "background_features").resizable().scaledToFill()
+                    }
+                }
+                .frame(width: proxy.size.width, height: proxy.size.height).clipped()
+            }.ignoresSafeArea()
+                .overlay(Color.black.opacity(min(0.9, max(0, remoteTheme.config.overlay ?? 0.4))))
 
             VStack(spacing: 0) {
                 if currentScreen > 0 {
@@ -403,7 +423,7 @@ struct FeaturesView: View {
                                     Spacer()
                                     Image(systemName: "chevron.right").foregroundStyle(.white.opacity(0.5))
                                 }
-                                .padding().background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 16)).overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.3), lineWidth: 0.5))
+                                .padding().background(Color.white.opacity(themeCardOpacity), in: RoundedRectangle(cornerRadius: 16)).overlay(RoundedRectangle(cornerRadius: 16).stroke(themeAccent.opacity(0.45), lineWidth: 0.7))
                             }.buttonStyle(.plain)
                         } else if currentScreen == 1 {
                             HStack(spacing: 10) {
@@ -454,9 +474,9 @@ struct FeaturesView: View {
             HStack(spacing: 14) {
                 Image(systemName: category.icon)
                     .font(.system(size: 24, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(themeAccent)
                     .frame(width: 48, height: 48)
-                    .background(Color.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 13))
+                    .background(themeAccent.opacity(0.18), in: RoundedRectangle(cornerRadius: 13))
                 VStack(alignment: .leading, spacing: 4) {
                     Text(category.title)
                         .font(.system(size: 17, weight: .black, design: .rounded))
@@ -471,16 +491,16 @@ struct FeaturesView: View {
             }
             .padding(16)
             .frame(maxWidth: .infinity)
-            .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 18))
-            .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.white.opacity(0.3), lineWidth: 0.5))
+            .background(Color.white.opacity(themeCardOpacity), in: RoundedRectangle(cornerRadius: 18))
+            .overlay(RoundedRectangle(cornerRadius: 18).stroke(themeAccent.opacity(0.45), lineWidth: 0.7))
         }
         .buttonStyle(.plain)
     }
 
     private func menuButton(title: String, icon: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            VStack(spacing: 12) { Image(systemName: icon).font(.system(size: 30)).foregroundStyle(.white); Text(title).font(.headline).foregroundStyle(.white) }
-                .frame(maxWidth: .infinity).frame(height: 120).background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 20)).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.3), lineWidth: 0.5))
+            VStack(spacing: 12) { Image(systemName: icon).font(.system(size: 30)).foregroundStyle(themeAccent); Text(title).font(.headline).foregroundStyle(.white) }
+                .frame(maxWidth: .infinity).frame(height: 120).background(Color.white.opacity(themeCardOpacity), in: RoundedRectangle(cornerRadius: 20)).overlay(RoundedRectangle(cornerRadius: 20).stroke(themeAccent.opacity(0.45), lineWidth: 0.7))
         }.buttonStyle(.plain)
     }
 
@@ -516,7 +536,7 @@ struct FeaturesView: View {
             HStack(spacing: 8) {
                 Circle().fill(patchStore.isBusy ? .orange : (patchStore.activePatchIDs.isEmpty ? .white.opacity(0.5) : .green)).frame(width: 7, height: 7)
                 Text(patchStore.isBusy ? "PROCESSING PATCH…" : (patchStore.activePatchIDs.isEmpty ? "READY -- SELECT A PATCH" : "PATCH APPLIED")).font(.system(size: 11, weight: .bold, design: .rounded)).foregroundStyle(.white.opacity(0.85))
-            }.padding(.horizontal, 14).padding(.vertical, 12).background(Color.white.opacity(0.1), in: Capsule()).overlay(Capsule().stroke(Color.white.opacity(0.3), lineWidth: 0.5)).padding(.top, 10)
+            }.padding(.horizontal, 14).padding(.vertical, 12).background(Color.white.opacity(themeCardOpacity), in: Capsule()).overlay(Capsule().stroke(themeAccent.opacity(0.45), lineWidth: 0.7)).padding(.top, 10)
         }
     }
 
@@ -527,9 +547,9 @@ struct FeaturesView: View {
         return HStack(spacing: 12) {
             Image(systemName: "scope")
                 .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(.white)
+                .foregroundStyle(themeAccent)
                 .frame(width: 40, height: 40)
-                .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .background(themeAccent.opacity(0.16), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(displayName)
@@ -553,7 +573,7 @@ struct FeaturesView: View {
                 }
             } label: {
                 ZStack {
-                    Capsule().fill(isEnabled ? Color.white : Color.white.opacity(0.2)).frame(width: 50, height: 30)
+                    Capsule().fill(isEnabled ? themeAccent : Color.white.opacity(0.2)).frame(width: 50, height: 30)
                     Circle().fill(isEnabled ? Color.black : Color.white).frame(width: 24, height: 24).offset(x: isEnabled ? 10 : -10).shadow(radius: 2)
                 }
             }
@@ -562,8 +582,8 @@ struct FeaturesView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
-        .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.white.opacity(0.3), lineWidth: 0.5))
+        .background(Color.white.opacity(themeCardOpacity), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(themeAccent.opacity(0.45), lineWidth: 0.7))
         .opacity(patchStore.isBusy ? 0.5 : 1)
     }
 
