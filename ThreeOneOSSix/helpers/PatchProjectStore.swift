@@ -989,6 +989,7 @@ func applyPatch(_ item: PatchLibraryItem) {
 
     private func failUnlock(_ error: PatchPackageError) {
         isBusy = false
+        log("patch: unlock failed key=\(error.localizationKey) argument=\(error.localizationArgument ?? "none")")
         if case .invalidPasswordOrCorruptedPackage = error {
             unlockErrorKey = "patch.error.wrong_password"
         } else {
@@ -997,6 +998,7 @@ func applyPatch(_ item: PatchLibraryItem) {
     }
 
     private func present(_ error: PatchPackageError) {
+        log("patch: operation failed key=\(error.localizationKey) argument=\(error.localizationArgument ?? "none")")
         alert = PatchStoreAlert(
             titleKey: "common.failed",
             messageKey: error.localizationKey,
