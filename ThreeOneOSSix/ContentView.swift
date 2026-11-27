@@ -492,6 +492,7 @@ struct SettingsView: View {
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var audioManager = AudioManager.shared
     @State private var showDiag = false
+    @State private var showLogs = false
     @State private var showUnlock = false
 
     var body: some View {
@@ -562,6 +563,28 @@ struct SettingsView: View {
                             .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.3), lineWidth: 0.5))
                         }
                         .buttonStyle(.plain)
+
+                        Button {
+                            showLogs = true
+                        } label: {
+                            HStack {
+                                Image(systemName: "doc.text.magnifyingglass")
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text("Nhật ký hoạt động & lỗi")
+                                    Text("\(AppLog.shared.entries.count) bản ghi gần đây")
+                                        .font(.caption2)
+                                        .foregroundStyle(.white.opacity(0.6))
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right").opacity(0.5)
+                            }
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .padding()
+                            .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 16))
+                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.3), lineWidth: 0.5))
+                        }
+                        .buttonStyle(.plain)
                     }
 
                     VStack(alignment: .leading, spacing: 12) {
@@ -577,6 +600,7 @@ struct SettingsView: View {
             }
         }
         .sheet(isPresented: $showDiag) { SandboxDiagnosticsView() }
+        .sheet(isPresented: $showLogs) { LogView() }
         .sheet(isPresented: $showUnlock) { NavigationStack { UnlockView() } }
     }
 }
