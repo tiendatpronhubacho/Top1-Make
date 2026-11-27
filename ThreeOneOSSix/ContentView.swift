@@ -2,6 +2,68 @@ import SwiftUI
 import UIKit
 import AVFoundation
 
+private struct RemoteThemeEnvelope: Decodable {
+    let theme: RemoteThemeConfig?
+}
+
+private struct RemoteThemeConfig: Codable {
+    var title: String?
+    var subtitle: String?
+    var backgroundURL: String?
+    var accent: String?
+    var overlay: Double?
+    var cardOpacity: Double?
+    var tabHome: String?
+    var tabFeatures: String?
+    var tabSettings: String?
+    var order: [String]?
+}
+
+@MainActor
+private final class RemoteAppTheme: ObservableObject {
+    static let shared = RemoteAppTheme()
+    @Published private(set) var config = RemoteThemeConfig()
+    private let endpoint = URL(string: "https://ipa-device-server.dat1888haizz.workers.dev/v2/theme")!
+    private let cacheKey = "remote_app_theme_v1"
+
+    private init() {
+        if let data = UserDefaults.standard.data(forKey: cacheKey),
+           let cached = try? JSONDecoder().decode(RemoteThemeConfig.self, from: data) {
+            config = cached
+        }
+        Task { await refresh() }
+    }
+
+    func refresh() async {
+        do {
+            let (data, response) = try await URLSession.shared.data(from: endpoint)
+            guard (response as? HTTPURLResponse)?.statusCode == 200 else { return }
+            let payload = try JSONDecoder().decode(RemoteThemeEnvelope.self, from: data)
+            guard let latest = payload.theme else { return }
+            config = latest
+            if let cached = try? JSONEncoder().encode(latest) {
+                UserDefaults.standard.set(cached, forKey: cacheKey)
+            }
+        } catch {
+            print("Remote theme refresh failed: \(error)")
+        }
+    }
+}
+
+private extension Color {
+    init(remoteHex: String?) {
+        let raw = (remoteHex ?? "#ffffff").trimmingCharacters(in: CharacterSet(charactersIn: "#"))
+        let value = UInt64(raw, radix: 16) ?? 0xFFFFFF
+        self.init(
+            .sRGB,
+            red: Double((value >> 16) & 0xFF) / 255,
+            green: Double((value >> 8) & 0xFF) / 255,
+            blue: Double(value & 0xFF) / 255,
+            opacity: 1
+        )
+    }
+}
+
 // MARK: - QUẢN LÝ NHẠC NỀN
 class AudioManager: ObservableObject {
     static let shared = AudioManager()
@@ -81,29 +143,30 @@ private struct LicensedContentView: View {
         TabView(selection: $selectedTab) {
             HomeView(patchStore: patchStore)
                 .tabItem {
-                    Label("Trang chủ", systemImage: "house")
+                    Label(remoteTheme.config.tabHome ?? "Trang chủ", systemImage: "house")
                 }
                 .tag(0)
 
             FeaturesView(patchStore: patchStore)
                 .tabItem {
-                    Label("Tính năng", systemImage: "square.grid.2x2")
+                    Label(remoteTheme.config.tabFeatures ?? "Tính năng", systemImage: "square.grid.2x2")
                 }
                 .tag(1)
 
             SettingsView()
                 .tabItem {
-                    Label("Cài đặt", systemImage: "gearshape")
+                    Label(remoteTheme.config.tabSettings ?? "Cài đặt", systemImage: "gearshape")
                 }
                 .tag(2)
         }
-        .accentColor(.white)
+        .accentColor(Color(remoteHex: remoteTheme.config.accent))
         .preferredColorScheme(.dark)
         .toolbarBackground(.visible, for: .tabBar)
         .toolbarBackground(Color.black, for: .tabBar)
         .onAppear {
             configureTabBarAppearance()
             appState.detectSupport()
+            Task { await remoteTheme.refresh() }
         }
         .sheet(
             item: $patchStore.passwordRequest,
@@ -117,6 +180,7 @@ private struct LicensedContentView: View {
 // MARK: - TRANG CHỦ
 struct HomeView: View {
     @EnvironmentObject private var appState: AppState
+    @ObservedObject private var remoteTheme = RemoteAppTheme.shared
     @ObservedObject var patchStore: PatchProjectStore
     @State private var showCleaner = false
     @State private var showUnlock = false // Đã thêm biến này
@@ -125,18 +189,28 @@ struct HomeView: View {
         ZStack {
             Color.black.ignoresSafeArea()
             GeometryReader { proxy in
-                loadImageFromBundle(named: "background_home")
-                    .resizable().scaledToFill()
-                    .frame(width: proxy.size.width, height: proxy.size.height).clipped()
+                Group {
+                    if let raw = remoteTheme.config.backgroundURL,
+                       let url = URL(string: raw), url.scheme == "https" {
+                        AsyncImage(url: url) { image in
+                            image.resizable().scaledToFill()
+                        } placeholder: {
+                            loadImageFromBundle(named: "background_home").resizable().scaledToFill()
+                        }
+                    } else {
+                        loadImageFromBundle(named: "background_home").resizable().scaledToFill()
+                    }
+                }
+                .frame(width: proxy.size.width, height: proxy.size.height).clipped()
             }.ignoresSafeArea()
-            Color.black.opacity(0.2).ignoresSafeArea()
+            Color.black.opacity(min(0.9, max(0, remoteTheme.config.overlay ?? 0.2))).ignoresSafeArea()
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 18) {
                     HStack {
                         VStack(alignment: .leading, spacing: 3) {
-                            Text("TIENDAT").font(.system(size: 25, weight: .black, design: .rounded)).tracking(3).foregroundStyle(.white)
-                            Text("PATCH CONTROL CENTER").font(.system(size: 10, weight: .bold, design: .rounded)).tracking(1.7).foregroundStyle(.white.opacity(0.8))
+                            Text(remoteTheme.config.title ?? "TIENDAT").font(.system(size: 25, weight: .black, design: .rounded)).tracking(3).foregroundStyle(.white)
+                            Text(remoteTheme.config.subtitle ?? "PATCH CONTROL CENTER").font(.system(size: 10, weight: .bold, design: .rounded)).tracking(1.7).foregroundStyle(.white.opacity(0.8))
                         }
                         Spacer()
                     }
