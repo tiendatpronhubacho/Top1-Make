@@ -278,6 +278,7 @@ final class LicenseManager: ObservableObject {
     "licenseKey": key,
     "challenge": challenge,
     "signature": signature,
+    "publicKey": signingKey.publicKey.rawRepresentation.base64EncodedString(),
     "appVersion": appVersion,
     "buildHash": buildHash
 ]
