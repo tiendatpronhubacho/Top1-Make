@@ -18,8 +18,7 @@ MAGIC = b"3105PATCH\0"
 MIN_READ_SCHEMA = 1
 MAX_READ_SCHEMA = 9
 
-if not SOURCE.is_dir():
-    raise SystemExit(f"Patches directory not found: {SOURCE}")
+SOURCE.mkdir(parents=True, exist_ok=True)
 
 
 def catalog_name(name: str) -> str:
@@ -65,9 +64,6 @@ for path in sorted(SOURCE.iterdir(), key=lambda item: item.name.casefold()):
 
     packages[filename] = data
     metadata[filename] = (schema, hashlib.sha256(data).hexdigest())
-
-if not packages:
-    raise SystemExit("No .3105/.3106 patch packages found in Patches/")
 
 payload = plistlib.dumps(packages, fmt=plistlib.FMT_BINARY, sort_keys=True)
 verified = plistlib.loads(payload)
