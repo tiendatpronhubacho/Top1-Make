@@ -286,11 +286,12 @@ struct FeaturesView: View {
     }
 
     private func displayPatchName(_ name: String) -> String {
-        let suffix = ".3105"
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.hasSuffix(suffix)
-            ? String(trimmed.dropLast(suffix.count)).trimmingCharacters(in: .whitespacesAndNewlines)
-            : trimmed
+        for suffix in [".3105", ".3106"] where trimmed.lowercased().hasSuffix(suffix) {
+            return String(trimmed.dropLast(suffix.count))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return trimmed
     }
 
     var body: some View {
@@ -431,7 +432,7 @@ struct FeaturesView: View {
                         .padding(.vertical, 24)
                 } else {
                     ForEach(Array(filteredPatches.enumerated()), id: \.element.id) { index, patch in
-                        let displayName = selectedCategory == .mod ? "Mod v\(index + 1)" : displayPatchName(patch.name)
+                        let displayName = displayPatchName(patch.name)
                         patchRow(patch: patch, displayName: displayName)
                     }
                 }
