@@ -160,15 +160,37 @@ final class PatchProjectStore: ObservableObject {
         return cachedItem(for: patch)
     }
 
+    private func currentOfficialBuildHash() throws -> String {
+        guard Bundle.main.object(forInfoDictionaryKey: "IPAOfficialBuildMarker") as? String == "TIENDAT-OFFICIAL-IPA-V1" else {
+            throw NSError(
+                domain: "WorkerPatchList",
+                code: 403,
+                userInfo: [NSLocalizedDescriptionKey: "IPA chưa được Admin duyệt"]
+            )
+        }
+        let infoURL = Bundle.main.bundleURL.appendingPathComponent("Info.plist", isDirectory: false)
+        let data = try Data(contentsOf: infoURL, options: [.mappedIfSafe])
+        guard !data.isEmpty else {
+            throw NSError(
+                domain: "WorkerPatchList",
+                code: 403,
+                userInfo: [NSLocalizedDescriptionKey: "Không đọc được Info.plist của IPA"]
+            )
+        }
+        return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
+
     private func workerPatchList(target: String) async throws -> [WorkerPatch] {
         guard let baseURL = URL(string: "https://ipa-device-server.dat1888haizz.workers.dev/v2/patches"),
               var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false) else {
             throw NSError(domain: "WorkerPatchList", code: -1,
                           userInfo: [NSLocalizedDescriptionKey: "URL không hợp lệ"])
         }
+        let buildHash = try currentOfficialBuildHash()
         components.queryItems = [
             URLQueryItem(name: "target", value: target),
-            URLQueryItem(name: "channel", value: "stable")
+            URLQueryItem(name: "channel", value: "stable"),
+            URLQueryItem(name: "buildHash", value: buildHash)
         ]
         guard let url = components.url else {
             throw NSError(domain: "WorkerPatchList", code: -1,
