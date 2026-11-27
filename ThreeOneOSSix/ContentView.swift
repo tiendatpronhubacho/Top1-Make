@@ -491,6 +491,7 @@ struct FeaturesView: View {
 struct SettingsView: View {
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var audioManager = AudioManager.shared
+    @ObservedObject private var appLog = AppLog.shared
     @State private var showDiag = false
     @State private var showLogs = false
     @State private var showUnlock = false
