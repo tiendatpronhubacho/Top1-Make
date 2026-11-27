@@ -16,6 +16,8 @@ private struct RemoteThemeConfig: Codable {
     var tabHome: String?
     var tabFeatures: String?
     var tabSettings: String?
+    var patchTitle: String?
+    var patchNames: [String: String]?
     var order: [String]?
 }
 
@@ -369,7 +371,12 @@ struct FeaturesView: View {
         return .mod
     }
 
-    private func displayPatchName(_ name: String) -> String {
+    private func displayPatchName(_ patch: AdminPatch) -> String {
+        if let custom = remoteTheme.config.patchNames?[patch.id.uuidString],
+           !custom.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return custom.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        let name = patch.name
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         for suffix in [".3105", ".3106"] where trimmed.lowercased().hasSuffix(suffix) {
             return String(trimmed.dropLast(suffix.count))
@@ -406,7 +413,7 @@ struct FeaturesView: View {
                                 .font(.system(size: 16, weight: .bold)).foregroundStyle(.white)
                         }
                         Spacer()
-                        Text(currentScreen == 1 ? "Free Fire VN" : selectedCategory.title)
+                        Text(currentScreen == 1 ? "Free Fire VN" : "\(remoteTheme.config.patchTitle ?? "PATCH") · \(selectedCategory.title)")
                             .font(.headline).foregroundStyle(.white)
                         Spacer()
                         Image(systemName: "chevron.left").opacity(0)
@@ -527,7 +534,7 @@ struct FeaturesView: View {
                         .padding(.vertical, 24)
                 } else {
                     ForEach(Array(filteredPatches.enumerated()), id: \.element.id) { index, patch in
-                        let displayName = displayPatchName(patch.name)
+                        let displayName = displayPatchName(patch)
                         patchRow(patch: patch, displayName: displayName)
                     }
                 }
