@@ -18,6 +18,9 @@ private struct RemoteThemeConfig: Codable {
     var tabSettings: String?
     var patchTitle: String?
     var patchNames: [String: String]?
+    var patchAimNote: String?
+    var patchModNote: String?
+    var patchLocationNote: String?
     var order: [String]?
 }
 
@@ -434,15 +437,15 @@ struct FeaturesView: View {
                             }.buttonStyle(.plain)
                         } else if currentScreen == 1 {
                             HStack(spacing: 10) {
-                                menuButton(title: "AIM", icon: "scope") {
+                                menuButton(title: "AIM", subtitle: remoteTheme.config.patchAimNote ?? "", icon: "scope") {
                                     selectedCategory = .aim
                                     withAnimation { currentScreen = 2 }
                                 }
-                                menuButton(title: "MOD", icon: "puzzlepiece.extension") {
+                                menuButton(title: "MOD", subtitle: remoteTheme.config.patchModNote ?? "", icon: "puzzlepiece.extension") {
                                     selectedCategory = .mod
                                     withAnimation { currentScreen = 2 }
                                 }
-                                menuButton(title: "ĐỊNH VỊ", icon: "mappin.and.ellipse") {
+                                menuButton(title: "ĐỊNH VỊ", subtitle: remoteTheme.config.patchLocationNote ?? "", icon: "mappin.and.ellipse") {
                                     selectedCategory = .location
                                     withAnimation { currentScreen = 2 }
                                 }
@@ -504,10 +507,26 @@ struct FeaturesView: View {
         .buttonStyle(.plain)
     }
 
-    private func menuButton(title: String, icon: String, action: @escaping () -> Void) -> some View {
+    private func menuButton(title: String, subtitle: String, icon: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            VStack(spacing: 12) { Image(systemName: icon).font(.system(size: 30)).foregroundStyle(themeAccent); Text(title).font(.headline).foregroundStyle(.white) }
-                .frame(maxWidth: .infinity).frame(height: 120).background(Color.white.opacity(themeCardOpacity), in: RoundedRectangle(cornerRadius: 20)).overlay(RoundedRectangle(cornerRadius: 20).stroke(themeAccent.opacity(0.45), lineWidth: 0.7))
+            VStack(spacing: 9) {
+                Image(systemName: icon).font(.system(size: 30)).foregroundStyle(themeAccent)
+                Text(title).font(.headline).foregroundStyle(.white)
+                if !subtitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Text(subtitle)
+                        .font(.system(size: 10, weight: .medium, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.72))
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 4)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 120)
+            .padding(.horizontal, 4)
+            .background(Color.white.opacity(themeCardOpacity), in: RoundedRectangle(cornerRadius: 20))
+            .overlay(RoundedRectangle(cornerRadius: 20).stroke(themeAccent.opacity(0.45), lineWidth: 0.7))
         }.buttonStyle(.plain)
     }
 
