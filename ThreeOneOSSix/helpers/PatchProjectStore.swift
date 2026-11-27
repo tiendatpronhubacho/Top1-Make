@@ -131,6 +131,18 @@ final class PatchProjectStore: ObservableObject {
         return items.first(where: { $0.id == patch.id })
     }
 
+    /// Resolve the local package using the same stable name+target key as apply/restore.
+    /// Admin UUIDs can change independently and are not the local package identity.
+    func localItem(for patch: AdminPatch) -> PatchLibraryItem? {
+        cachedItem(for: patch)
+    }
+
+    /// The receipt is authoritative if the app's persisted toggle state is stale.
+    func isPatchActive(_ patch: AdminPatch) -> Bool {
+        guard let item = cachedItem(for: patch) else { return false }
+        return activePatchIDs.contains(item.id) || hasActiveReceipt(item)
+    }
+
     private func hasActiveReceipt(_ item: PatchLibraryItem) -> Bool {
         DevicePatchService.latestReceipt(projectID: item.id) != nil
     }
