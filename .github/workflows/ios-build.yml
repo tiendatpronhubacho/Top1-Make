@@ -32,6 +32,11 @@ jobs:
         with:
           python-version: "3.x"
 
+      - name: Generate PatchCatalog.dat from Patches
+        run: |
+          set -euo pipefail
+          python3 tools/build_patch_catalog.py
+
       - name: Build IpaProxy for iOS
         run: |
           set -euo pipefail
