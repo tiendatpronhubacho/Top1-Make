@@ -237,7 +237,9 @@ enum PatchTransaction {
                 var originalDigest: Data?
                 if let backupFilename {
                     let backupURL = transactionDirectory.appendingPathComponent(backupFilename)
-                    try fileManager.copyItem(at: resolved.target, to: backupURL)
+                    // APFS clonefile creates a copy-on-write snapshot when supported,
+                    // avoiding a full byte-for-byte copy for large game assets.
+                    try cloneOrCopy(from: resolved.target, to: backupURL, fileManager: fileManager)
                     originalDigest = try digestFile(backupURL)
                 }
                 let replacementDigest = digest(resolved.rule.replacementData)
@@ -317,18 +319,14 @@ enum PatchTransaction {
                 )
                 if parentGrant >= 0 { targetGrants.append(parentGrant) }
                 if let backupCenter {
-                    let expectedSHA256 = records[index].replacementDigest
-                        .map { String(format: "%02x", Int($0)) }
-                        .joined()
-                    try VerifiedFileWriter.write(
+                    // PatchTransaction has already persisted and verified the original
+                    // file in its own recovery journal. Creating another BackupCenter
+                    // version + original snapshot here duplicates large file I/O.
+                    // Keep the in-place writer (inode/xattrs preserving), then verify
+                    // the destination against the transaction's precomputed SHA-256.
+                    try backupCenter.writeDataInPlace(
                         resolved.rule.replacementData,
-                        to: resolved.target,
-                        feature: .patch,
-                        reason: "patch \(project.name)/\(resolved.rule.relativePath)",
-                        containerPath: roots[resolved.rule.bundleID]?.path,
-                        bundleID: resolved.rule.bundleID,
-                        expectedSHA256: expectedSHA256,
-                        center: backupCenter
+                        to: resolved.target
                     )
                 } else {
                     try atomicWrite(
@@ -338,11 +336,7 @@ enum PatchTransaction {
                         fileManager: fileManager
                     )
                 }
-                // VerifiedFileWriter already reads the destination back and
-                // verifies it against this transaction's precomputed digest.
-                // Avoid a second full-file read on the BackupCenter path.
-                if backupCenter == nil,
-                   try digestFile(resolved.target) != records[index].replacementDigest {
+                guard try digestFile(resolved.target) == records[index].replacementDigest else {
                     throw PatchPackageError.applyFailed
                 }
                 log(String(format: "patch-timing write-file %@ %.3fs",
@@ -963,6 +957,29 @@ enum PatchTransaction {
         let leftDepth = lhs.filter { $0 == "/" }.count
         let rightDepth = rhs.filter { $0 == "/" }.count
         return leftDepth == rightDepth ? lhs < rhs : leftDepth < rightDepth
+    }
+
+    /// Prefer APFS copy-on-write cloning for transaction backups. Fall back
+    /// to FileManager.copyItem on filesystems that do not support clonefile.
+    private static func cloneOrCopy(
+        from source: URL,
+        to destination: URL,
+        fileManager: FileManager
+    ) throws {
+        var cloned = false
+        source.withUnsafeFileSystemRepresentation { sourcePath in
+            destination.withUnsafeFileSystemRepresentation { destinationPath in
+                guard let sourcePath, let destinationPath else { return }
+                cloned = clonefile(sourcePath, destinationPath, 0) == 0
+            }
+        }
+        guard !cloned else { return }
+        do {
+            try fileManager.copyItem(at: source, to: destination)
+        } catch {
+            log("patch: backup clone/copy failed for \(source.lastPathComponent): \(error)")
+            throw PatchPackageError.applyFailed
+        }
     }
 
     private static func atomicWrite(
