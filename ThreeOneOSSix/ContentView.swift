@@ -260,6 +260,13 @@ struct FeaturesView: View {
     }
 
     private func category(for patch: AdminPatch) -> PatchCategory {
+        switch patch.category.lowercased() {
+        case "aim": return .aim
+        case "mod": return .mod
+        case "location", "định vị", "dinh vi": return .location
+        default: break // Patch cũ: tiếp tục phân loại theo tên để không đổi vị trí hiển thị.
+        }
+
         let name = patch.name.folding(
             options: [.caseInsensitive, .diacriticInsensitive],
             locale: Locale(identifier: "vi_VN")
