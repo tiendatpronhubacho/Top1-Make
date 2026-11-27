@@ -73,10 +73,13 @@ jobs:
           rm -rf build/ios/ipa/Payload/IpaProxy.app
           ditto "$APP_PATH" build/ios/ipa/Payload/IpaProxy.app
 
-          /usr/libexec/PlistBuddy \
-            -c "Set :CFBundleIdentifier com.tiendat.ipaproxy" \
-            build/ios/ipa/Payload/IpaProxy.app/Info.plist
+          APP_PLIST="build/ios/ipa/Payload/IpaProxy.app/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.tiendat.ipaproxy" "$APP_PLIST"
 
+          OFFICIAL_BUILD_ID="$(uuidgen | tr '[:upper:]' '[:lower:]')"
+          /usr/libexec/PlistBuddy -c "Add :IPAOfficialBuildID string TIENDAT-OFFICIAL-BUILD-ID:$OFFICIAL_BUILD_ID" "$APP_PLIST"
+
+          echo "OfficialBuildID: $OFFICIAL_BUILD_ID"
           cd build/ios/ipa
           /usr/bin/zip -qry IpaProxy-unsigned.ipa Payload
 
