@@ -6,9 +6,36 @@ import Combine
 // MARK: - Global logger
 class AppLog: ObservableObject {
     static let shared = AppLog()
-    @Published var entries: [String] = []
-    func append(_ msg: String) {
-        DispatchQueue.main.async { self.entries.append(msg) }
+    private static let storageKey = "com.tiendat.appLog.entries"
+    private static let maximumEntries = 500
+
+    @Published var entries: [String] = [] {
+        didSet {
+            let bounded = Array(entries.suffix(Self.maximumEntries))
+            if bounded != entries {
+                entries = bounded
+                return
+            }
+            UserDefaults.standard.set(bounded, forKey: Self.storageKey)
+        }
+    }
+
+    private init() {
+        entries = UserDefaults.standard.stringArray(forKey: Self.storageKey) ?? []
+    }
+
+    func append(_ message: String) {
+        let timestamp = ISO8601DateFormatter().string(from: Date())
+        let line = "[\(timestamp)] \(message)"
+        DispatchQueue.main.async {
+            self.entries.append(line)
+        }
+    }
+
+    func clear() {
+        DispatchQueue.main.async {
+            self.entries.removeAll()
+        }
     }
 }
 /// Original stderr, kept open before `setupLogCapture` redirects fd 2. Writing
