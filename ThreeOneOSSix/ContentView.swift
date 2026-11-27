@@ -372,7 +372,7 @@ struct FeaturesView: View {
     }
 
     private func displayPatchName(_ patch: AdminPatch) -> String {
-        if let custom = remoteTheme.config.patchNames?[patch.id.uuidString],
+        if let custom = remoteTheme.config.patchNames?[patch.id.uuidString.lowercased()],
            !custom.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return custom.trimmingCharacters(in: .whitespacesAndNewlines)
         }
