@@ -323,13 +323,7 @@ struct HomeView: View {
                         if (remoteTheme.config.homeBackgroundType ?? remoteTheme.config.backgroundType) == "video" {
                             ZStack {
                                 loadImageFromBundle(named: "background_home").resizable().scaledToFill()
-                                ZStack {
-                                loadImageFromBundle(named: "background_features").resizable().scaledToFill()
-                                ZStack {
-                                loadImageFromBundle(named: "background_settings").resizable().scaledToFill()
                                 LoopingBackgroundVideo(url: playableThemeVideoURL(url))
-                            }
-                            }
                             }
                         } else {
                             AsyncImage(url: url) { image in
@@ -569,7 +563,10 @@ struct FeaturesView: View {
                     if let raw = remoteTheme.config.featuresBackgroundURL ?? remoteTheme.config.homeBackgroundURL ?? remoteTheme.config.backgroundURL,
                        let url = URL(string: raw), url.scheme?.lowercased() == "https" {
                         if (remoteTheme.config.featuresBackgroundType ?? remoteTheme.config.homeBackgroundType ?? remoteTheme.config.backgroundType) == "video" {
-                            LoopingBackgroundVideo(url: playableThemeVideoURL(url))
+                            ZStack {
+                                loadImageFromBundle(named: "background_features").resizable().scaledToFill()
+                                LoopingBackgroundVideo(url: playableThemeVideoURL(url))
+                            }
                         } else {
                             AsyncImage(url: url) { image in
                                 image.resizable().scaledToFill()
@@ -841,7 +838,10 @@ struct SettingsView: View {
                     if let raw = remoteTheme.config.settingsBackgroundURL,
                        let url = URL(string: raw), url.scheme?.lowercased() == "https" {
                         if remoteTheme.config.settingsBackgroundType == "video" {
-                            LoopingBackgroundVideo(url: playableThemeVideoURL(url))
+                            ZStack {
+                                loadImageFromBundle(named: "background_settings").resizable().scaledToFill()
+                                LoopingBackgroundVideo(url: playableThemeVideoURL(url))
+                            }
                         } else {
                             AsyncImage(url: url) { image in
                                 image.resizable().scaledToFill()
