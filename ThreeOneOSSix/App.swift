@@ -554,7 +554,7 @@ func authorizePatch(action: String, patchID: String? = nil) async throws {
         for _ in 0..<commandCount {
             let command = try u32(cursor)
             let commandSize = Int(try u32(cursor + 4))
-            guard commandSize >= 8, cursor <= commandEnd - commandSize else {
+            guard commandSize >= 8, cursor <= commandEnd, commandSize <= commandEnd - cursor else {
                 throw LicenseFailure.server("binary_integrity_invalid_macho")
             }
 
