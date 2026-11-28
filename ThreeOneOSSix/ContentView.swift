@@ -10,6 +10,7 @@ private struct RemoteThemeConfig: Codable {
     var title: String?
     var subtitle: String?
     var backgroundURL: String?
+    var backgroundType: String?
     var accent: String?
     var overlay: Double?
     var cardOpacity: Double?
@@ -52,6 +53,58 @@ private final class RemoteAppTheme: ObservableObject {
         } catch {
             print("Remote theme refresh failed: \(error)")
         }
+    }
+}
+
+private struct LoopingBackgroundVideo: UIViewRepresentable {
+    let url: URL
+
+    final class PlayerView: UIView {
+        override class var layerClass: AnyClass { AVPlayerLayer.self }
+        var playerLayer: AVPlayerLayer { layer as! AVPlayerLayer }
+    }
+
+    final class Coordinator {
+        var player: AVQueuePlayer?
+        var looper: AVPlayerLooper?
+        var currentURL: URL?
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    func makeUIView(context: Context) -> PlayerView {
+        let view = PlayerView()
+        view.backgroundColor = .black
+        view.playerLayer.videoGravity = .resizeAspectFill
+        configure(view, coordinator: context.coordinator)
+        return view
+    }
+
+    func updateUIView(_ view: PlayerView, context: Context) {
+        if context.coordinator.currentURL != url {
+            configure(view, coordinator: context.coordinator)
+        }
+    }
+
+    private func configure(_ view: PlayerView, coordinator: Coordinator) {
+        coordinator.player?.pause()
+        coordinator.looper = nil
+        let item = AVPlayerItem(url: url)
+        let queue = AVQueuePlayer()
+        queue.isMuted = true
+        queue.actionAtItemEnd = .none
+        coordinator.player = queue
+        coordinator.looper = AVPlayerLooper(player: queue, templateItem: item)
+        coordinator.currentURL = url
+        view.playerLayer.player = queue
+        queue.play()
+    }
+
+    static func dismantleUIView(_ view: PlayerView, coordinator: Coordinator) {
+        coordinator.player?.pause()
+        view.playerLayer.player = nil
+        coordinator.looper = nil
+        coordinator.player = nil
     }
 }
 
@@ -197,11 +250,15 @@ struct HomeView: View {
             GeometryReader { proxy in
                 Group {
                     if let raw = remoteTheme.config.backgroundURL,
-                       let url = URL(string: raw), url.scheme == "https" {
-                        AsyncImage(url: url) { image in
-                            image.resizable().scaledToFill()
-                        } placeholder: {
-                            loadImageFromBundle(named: "background_home").resizable().scaledToFill()
+                       let url = URL(string: raw), url.scheme?.lowercased() == "https" {
+                        if remoteTheme.config.backgroundType == "video" {
+                            LoopingBackgroundVideo(url: url)
+                        } else {
+                            AsyncImage(url: url) { image in
+                                image.resizable().scaledToFill()
+                            } placeholder: {
+                                loadImageFromBundle(named: "background_home").resizable().scaledToFill()
+                            }
                         }
                     } else {
                         loadImageFromBundle(named: "background_home").resizable().scaledToFill()
