@@ -556,13 +556,11 @@ private struct AppBundlePathDirectoryView: View {
         List {
             ForEach(entries) { entry in
                 if entry.isDirectory {
-                    NavigationLink {
-                        AppBundlePathDirectoryView(
-                            rootPath: rootPath,
-                            currentPath: entry.path,
-                            onSelect: onSelect
-                        )
-                    } label: {
+                    NavigationLink(destination: AnyView(AppBundlePathDirectoryView(
+                        rootPath: rootPath,
+                        currentPath: entry.path,
+                        onSelect: onSelect
+                    ))) {
                         Label(entry.name, systemImage: "folder")
                     }
                 } else {
@@ -602,7 +600,7 @@ private func directoryEntries(at path: String) throws -> [FileEntry] {
     let urls = try FileManager.default.contentsOfDirectory(
         at: URL(fileURLWithPath: path, isDirectory: true),
         includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey, .fileSizeKey],
-        options: [.skipsHiddenFiles]
+        options: []
     )
     return urls.compactMap { url in
         guard let values = try? url.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey, .fileSizeKey]),
