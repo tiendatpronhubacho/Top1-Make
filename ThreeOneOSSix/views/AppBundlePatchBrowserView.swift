@@ -12,6 +12,7 @@ struct AppBundlePatchItem: Codable, Identifiable {
     let replacementFilename: String
     let replacementData: Data
     let createdAt: Date
+    var remoteFileID: String? = nil
 
     var project: PatchProject {
         PatchProject(
@@ -325,6 +326,7 @@ private struct AppBundlePatchDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var licenseManager: LicenseManager
     @State private var patches: [AppBundlePatchItem] = []
+    @State private var remoteFiles: [WorkerReplacementFile] = []
     @State private var showingPathPrompt = false
     @State private var showingBundlePicker = false
     @State private var targetPath = ""
@@ -341,11 +343,42 @@ private struct AppBundlePatchDetailView: View {
                     Text(app.bundleID).font(.caption.monospaced()).foregroundStyle(.secondary)
                     Text(app.path).font(.caption2.monospaced()).foregroundStyle(.secondary)
                 }
-                Section("Bundle Patch riêng") {
-                    if patches.isEmpty {
-                        Text("Chưa có patch cho ứng dụng này.").foregroundStyle(.secondary)
+                Section("File thay thế từ Server") {
+                    if remoteFiles.isEmpty {
+                        Text("Không có file thay thế đang bật cho ứng dụng này.").foregroundStyle(.secondary)
                     }
-                    ForEach(patches) { patch in
+                    ForEach(remoteFiles) { file in
+                        let downloaded = patches.first(where: { $0.remoteFileID == file.id })
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(file.name).font(.body.weight(.semibold))
+                                    Text(file.relativePath).font(.caption.monospaced()).foregroundStyle(.secondary)
+                                    Text(ByteCountFormatter.string(fromByteCount: file.sizeBytes, countStyle: .file))
+                                        .font(.caption2).foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                if let downloaded {
+                                    Toggle("Bật", isOn: Binding(
+                                        get: { AppBundlePatchService.isApplied(projectID: downloaded.id) },
+                                        set: { enabled in toggle(downloaded, enabled: enabled) }
+                                    ))
+                                    .labelsHidden()
+                                    .disabled(isBusy)
+                                } else {
+                                    Button("Tải") { download(file) }
+                                        .disabled(isBusy)
+                                }
+                            }
+                        }
+                    }
+                }
+                Section("Bundle Patch riêng") {
+                    let localPatches = patches.filter { $0.remoteFileID == nil }
+                    if localPatches.isEmpty {
+                        Text("Chưa có patch cục bộ cho ứng dụng này.").foregroundStyle(.secondary)
+                    }
+                    ForEach(localPatches) { patch in
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
@@ -385,7 +418,10 @@ private struct AppBundlePatchDetailView: View {
                     Button("Đóng") { dismiss() }
                 }
             }
-            .onAppear(perform: reload)
+            .onAppear {
+                reload()
+                Task { await loadRemoteFiles() }
+            }
             .sheet(
                 isPresented: $showingBundlePicker,
                 onDismiss: {
@@ -454,6 +490,43 @@ private struct AppBundlePatchDetailView: View {
         patches = AppBundlePatchLibrary.load(bundleID: app.bundleID)
     }
 
+    private func loadRemoteFiles() async {
+        do {
+            remoteFiles = try await licenseManager.listReplacementFiles(bundleID: app.bundleID)
+        } catch {
+            errorMessage = "Không tải được File thay thế từ Server: \(error.localizedDescription)"
+        }
+    }
+
+    private func download(_ file: WorkerReplacementFile) {
+        guard !isBusy else { return }
+        isBusy = true
+        Task { @MainActor in
+            do {
+                let data = try await licenseManager.downloadReplacementFileData(fileID: file.id, bundleID: app.bundleID)
+                guard let id = UUID(uuidString: file.id) else {
+                    throw NSError(domain: "ReplacementFile", code: 1, userInfo: [NSLocalizedDescriptionKey: "ID file từ máy chủ không hợp lệ."])
+                }
+                let item = AppBundlePatchItem(
+                    id: id,
+                    name: file.name,
+                    bundleID: app.bundleID,
+                    relativePath: file.relativePath,
+                    replacementFilename: file.assetName,
+                    replacementData: data,
+                    createdAt: Date(),
+                    remoteFileID: file.id
+                )
+                try AppBundlePatchLibrary.save(item)
+                reload()
+                isBusy = false
+            } catch {
+                isBusy = false
+                errorMessage = "Không tải được file thay thế: \(error.localizedDescription)"
+            }
+        }
+    }
+
     private func toggle(_ patch: AppBundlePatchItem, enabled: Bool) {
         guard !isBusy else { return }
         isBusy = true
@@ -494,8 +567,9 @@ private struct AppBundlePatchDetailView: View {
     }
 
     private func deletePatches(at offsets: IndexSet) {
+        let localPatches = patches.filter { $0.remoteFileID == nil }
         for index in offsets {
-            let patch = patches[index]
+            let patch = localPatches[index]
             do {
                 try AppBundlePatchLibrary.delete(patch)
             } catch {
