@@ -161,6 +161,14 @@ struct PatchProjectsView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink {
+                        AppBundlePatchBrowserView()
+                    } label: {
+                        Image(systemName: "shippingbox")
+                    }
+                    .accessibilityLabel("App Bundle Patch")
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
                         Button {
                             showCreate = true
