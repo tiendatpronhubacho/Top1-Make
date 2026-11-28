@@ -535,10 +535,17 @@ private struct AppBundlePatchDetailView: View {
                 if enabled {
                     // Bundle patches use the same server-side license gate as
                     // App Data patches; local filesystem access alone is not authorization.
-                    try await licenseManager.authorizePatch(
-                        action: "patch_apply",
-                        patchID: patch.id.uuidString
-                    )
+                    if let remoteFileID = patch.remoteFileID {
+                        try await licenseManager.authorizeReplacementFileApply(
+                            fileID: remoteFileID,
+                            bundleID: patch.bundleID
+                        )
+                    } else {
+                        try await licenseManager.authorizePatch(
+                            action: "patch_apply",
+                            patchID: patch.id.uuidString
+                        )
+                    }
                 }
                 DispatchQueue.global(qos: .userInitiated).async {
                     do {
