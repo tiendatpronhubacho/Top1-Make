@@ -76,6 +76,59 @@ jobs:
           APP_PLIST="build/ios/ipa/Payload/IpaProxy.app/Info.plist"
           /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.tiendat.ipaproxy" "$APP_PLIST"
 
+          # Hash the Mach-O __TEXT segment. Unlike the signature blob, this
+          # segment is stable when the IPA is re-signed by the installer.
+          EXECUTABLE_NAME="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP_PLIST")"
+          EXECUTABLE_PATH="build/ios/ipa/Payload/IpaProxy.app/$EXECUTABLE_NAME"
+          python3 - "$EXECUTABLE_PATH" "$APP_PLIST" <<'PY'
+          import hashlib
+          import plistlib
+          import struct
+          import sys
+
+          executable_path, plist_path = sys.argv[1], sys.argv[2]
+          with open(executable_path, "rb") as handle:
+              binary = handle.read()
+
+          if len(binary) < 32 or struct.unpack_from("<I", binary, 0)[0] != 0xfeedfacf:
+              raise SystemExit("Expected a thin 64-bit arm64 Mach-O executable")
+
+          command_count = struct.unpack_from("<I", binary, 16)[0]
+          command_bytes = struct.unpack_from("<I", binary, 20)[0]
+          if not command_count or command_count > 10000 or command_bytes > len(binary) - 32:
+              raise SystemExit("Invalid Mach-O load-command table")
+
+          cursor = 32
+          command_end = 32 + command_bytes
+          text_range = None
+          for _ in range(command_count):
+              if cursor + 8 > command_end:
+                  raise SystemExit("Truncated Mach-O load command")
+              command, command_size = struct.unpack_from("<II", binary, cursor)
+              if command_size < 8 or cursor + command_size > command_end:
+                  raise SystemExit("Invalid Mach-O load command size")
+              if command == 0x19 and command_size >= 72:
+                  segment_name = binary[cursor + 8:cursor + 24].split(b"\\0", 1)[0]
+                  if segment_name == b"__TEXT":
+                      file_offset, file_size = struct.unpack_from("<QQ", binary, cursor + 40)
+                      if not file_size or file_offset + file_size > len(binary):
+                          raise SystemExit("Invalid __TEXT segment range")
+                      text_range = (file_offset, file_offset + file_size)
+                      break
+              cursor += command_size
+
+          if text_range is None:
+              raise SystemExit("Mach-O __TEXT segment not found")
+
+          digest = hashlib.sha256(binary[text_range[0]:text_range[1]]).hexdigest()
+          with open(plist_path, "rb") as handle:
+              info = plistlib.load(handle)
+          info["IPAExecutableTextSHA256"] = digest
+          with open(plist_path, "wb") as handle:
+              plistlib.dump(info, handle, fmt=plistlib.FMT_BINARY, sort_keys=True)
+          print("Executable __TEXT SHA-256:", digest)
+          PY
+
           OFFICIAL_BUILD_ID="$(uuidgen | tr '[:upper:]' '[:lower:]')"
           /usr/libexec/PlistBuddy -c "Add :IPAOfficialBuildID string TIENDAT-OFFICIAL-BUILD-ID:$OFFICIAL_BUILD_ID" "$APP_PLIST"
 
