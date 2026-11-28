@@ -29,9 +29,53 @@ struct AdminPatch: Identifiable, Hashable {
 }
 
 private struct WorkerPatchList: Decodable {
-    let ok: Bool?
+    let ok: Bool
     let patches: [WorkerPatch]
-    let error: String?
+}
+
+private struct SignedWorkerPatchList: Decodable {
+    let ok: Bool
+    let signedPayload: String
+    let signature: String
+}
+
+private enum PatchManifestVerifier {
+    // Public key only. The matching private key is stored as a Worker secret.
+    private static let publicKeyBase64 = "iNOpheXH6m5CKOvxXaTmjSrCRDa/LW3/ZA2HDjEh25Y="
+
+    static func verifyAndDecode(_ envelopeData: Data) throws -> [WorkerPatch] {
+        let envelope = try JSONDecoder().decode(SignedWorkerPatchList.self, from: envelopeData)
+        guard envelope.ok,
+              let message = decodeBase64URL(envelope.signedPayload),
+              let signature = decodeBase64URL(envelope.signature),
+              let publicKeyData = Data(base64Encoded: publicKeyBase64) else {
+            throw NSError(domain: "WorkerPatchList", code: 498,
+                          userInfo: [NSLocalizedDescriptionKey: "Chữ ký danh sách Patch không hợp lệ"])
+        }
+
+        let publicKey = try Curve25519.Signing.PublicKey(rawRepresentation: publicKeyData)
+        guard publicKey.isValidSignature(signature, for: message) else {
+            throw NSError(domain: "WorkerPatchList", code: 498,
+                          userInfo: [NSLocalizedDescriptionKey: "Không xác minh được chữ ký danh sách Patch"])
+        }
+
+        let manifest = try JSONDecoder().decode(WorkerPatchList.self, from: message)
+        guard manifest.ok else {
+            throw NSError(domain: "WorkerPatchList", code: 498,
+                          userInfo: [NSLocalizedDescriptionKey: "Manifest Patch bị từ chối"])
+        }
+        return manifest.patches
+    }
+
+    private static func decodeBase64URL(_ value: String) -> Data? {
+        var normalized = value.replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        let remainder = normalized.count % 4
+        if remainder != 0 {
+            normalized += String(repeating: "=", count: 4 - remainder)
+        }
+        return Data(base64Encoded: normalized)
+    }
 }
 
 private struct WorkerPatch: Decodable {
@@ -206,7 +250,7 @@ final class PatchProjectStore: ObservableObject {
             throw NSError(domain: "WorkerPatchList", code: status,
                           userInfo: [NSLocalizedDescriptionKey: "HTTP \(status)"])
         }
-        return try JSONDecoder().decode(WorkerPatchList.self, from: data).patches
+        return try PatchManifestVerifier.verifyAndDecode(data)
     }
 
     private func workerPatchListResult(target: String) async -> Result<[WorkerPatch], Error> {
