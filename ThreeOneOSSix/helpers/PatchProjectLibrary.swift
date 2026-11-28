@@ -47,7 +47,19 @@ enum PatchProjectLibrary {
             appropriateFor: nil,
             create: true
         )
-        let root = base.appendingPathComponent("PatchProjects", isDirectory: true)
+        // Dot-prefix keeps patch packages out of normal Files/Filza listings.
+        // Migrate the previous visible directory once, without deleting user data.
+        let legacyRoot = base.appendingPathComponent("PatchProjects", isDirectory: true)
+        let root = base.appendingPathComponent(".PatchProjects", isDirectory: true)
+        if !fileManager.fileExists(atPath: root.path),
+           fileManager.fileExists(atPath: legacyRoot.path) {
+            do {
+                try fileManager.moveItem(at: legacyRoot, to: root)
+            } catch {
+                // Keep the legacy directory intact if migration cannot complete.
+                log("patch: hidden library migration deferred")
+            }
+        }
         try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
         return root
     }
