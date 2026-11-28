@@ -94,7 +94,16 @@ enum AppBundlePatchLibrary {
 
 enum AppBundlePatchService {
     static func installedApps(refresh: Bool = false) -> [InstalledAppBundle] {
-        guard let snapshot = ContainerStore.launchServicesSnapshot() else { return [] }
+        // A previous failed LaunchServices lookup is cached for up to 24 hours.
+        // The App Bundle screen's reload button must invalidate that miss before
+        // attempting discovery again; otherwise every retry immediately returns nil.
+        if refresh {
+            ContainerStore.refreshLaunchServicesSnapshot()
+        }
+        guard let snapshot = ContainerStore.launchServicesSnapshot() else {
+            log("app-bundle: LaunchServices snapshot unavailable after refresh=\(refresh)")
+            return []
+        }
         let metadata = ContainerStore.applicationBundleMetadataCatalog()
         return snapshot.bundlePaths.compactMap { bundleID, rawPath in
             guard let path = validatedBundlePath(rawPath, expectedBundleID: bundleID) else { return nil }
