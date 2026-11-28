@@ -201,6 +201,68 @@ enum ContainerStore {
         return apps
     }
 
+    /// Discovers installed .app paths directly from the bundle filesystem.
+    /// This is deliberately independent of LaunchServices so App Bundle Patch
+    /// can still populate its list when the CSStore snapshot is unavailable.
+    static func applicationBundlePathCatalog() -> [String: String] {
+        var catalog: [String: String] = [:]
+        let fileManager = FileManager.default
+
+        for root in applicationBundleRoots {
+            let rootHandle = grantContainerAccess(root.path)
+            defer {
+                if rootHandle >= 0 { SandboxAccess.release(rootHandle) }
+            }
+
+            guard let rootEntries = try? fileManager.contentsOfDirectory(atPath: root.path) else {
+                log("app-bundle: filesystem root unavailable path=\(root.path) grant=\(rootHandle)")
+                continue
+            }
+
+            let bundlePaths: [String]
+            if root.nested {
+                bundlePaths = rootEntries.prefix(2_048).flatMap { entry -> [String] in
+                    guard UUID(uuidString: entry) != nil else { return [] }
+                    let containerPath = (root.path as NSString).appendingPathComponent(entry)
+                    let containerHandle = grantContainerAccess(containerPath)
+                    defer {
+                        if containerHandle >= 0 { SandboxAccess.release(containerHandle) }
+                    }
+                    let children = (try? fileManager.contentsOfDirectory(atPath: containerPath)) ?? []
+                    return children.prefix(32).compactMap { child in
+                        guard child.hasSuffix(".app") else { return nil }
+                        return (containerPath as NSString).appendingPathComponent(child)
+                    }
+                }
+            } else {
+                bundlePaths = rootEntries.prefix(2_048).compactMap { entry in
+                    guard entry.hasSuffix(".app") else { return nil }
+                    return (root.path as NSString).appendingPathComponent(entry)
+                }
+            }
+
+            for bundlePath in bundlePaths {
+                let bundleHandle = grantContainerAccess(bundlePath)
+                defer {
+                    if bundleHandle >= 0 { SandboxAccess.release(bundleHandle) }
+                }
+
+                let infoPath = (bundlePath as NSString).appendingPathComponent("Info.plist")
+                guard let data = try? Data(contentsOf: URL(fileURLWithPath: infoPath)),
+                      let metadata = ApplicationBundleMetadataReader.metadata(
+                        from: data,
+                        localizedInfo: Bundle(path: bundlePath)?.localizedInfoDictionary
+                      ) else {
+                    continue
+                }
+                catalog[metadata.bundleID] = bundlePath
+            }
+        }
+
+        log("app-bundle: filesystem path catalog resolved \(catalog.count) bundles")
+        return catalog
+    }
+
     static func applicationBundleMetadataCatalog() -> [String: ApplicationBundleMetadata] {
         var catalog: [String: ApplicationBundleMetadata] = [:]
         for root in applicationBundleRoots {
