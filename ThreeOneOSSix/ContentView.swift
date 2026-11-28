@@ -11,6 +11,12 @@ private struct RemoteThemeConfig: Codable {
     var subtitle: String?
     var backgroundURL: String?
     var backgroundType: String?
+    var homeBackgroundURL: String?
+    var homeBackgroundType: String?
+    var featuresBackgroundURL: String?
+    var featuresBackgroundType: String?
+    var settingsBackgroundURL: String?
+    var settingsBackgroundType: String?
     var accent: String?
     var overlay: Double?
     var cardOpacity: Double?
@@ -249,9 +255,9 @@ struct HomeView: View {
             Color.black.ignoresSafeArea()
             GeometryReader { proxy in
                 Group {
-                    if let raw = remoteTheme.config.backgroundURL,
+                    if let raw = remoteTheme.config.homeBackgroundURL ?? remoteTheme.config.backgroundURL,
                        let url = URL(string: raw), url.scheme?.lowercased() == "https" {
-                        if remoteTheme.config.backgroundType == "video" {
+                        if (remoteTheme.config.homeBackgroundType ?? remoteTheme.config.backgroundType) == "video" {
                             LoopingBackgroundVideo(url: url)
                         } else {
                             AsyncImage(url: url) { image in
@@ -450,12 +456,16 @@ struct FeaturesView: View {
             Color.black.ignoresSafeArea()
             GeometryReader { proxy in
                 Group {
-                    if let raw = remoteTheme.config.backgroundURL,
-                       let url = URL(string: raw), url.scheme == "https" {
-                        AsyncImage(url: url) { image in
-                            image.resizable().scaledToFill()
-                        } placeholder: {
-                            loadImageFromBundle(named: "background_features").resizable().scaledToFill()
+                    if let raw = remoteTheme.config.featuresBackgroundURL ?? remoteTheme.config.homeBackgroundURL ?? remoteTheme.config.backgroundURL,
+                       let url = URL(string: raw), url.scheme?.lowercased() == "https" {
+                        if (remoteTheme.config.featuresBackgroundType ?? remoteTheme.config.homeBackgroundType ?? remoteTheme.config.backgroundType) == "video" {
+                            LoopingBackgroundVideo(url: url)
+                        } else {
+                            AsyncImage(url: url) { image in
+                                image.resizable().scaledToFill()
+                            } placeholder: {
+                                loadImageFromBundle(named: "background_features").resizable().scaledToFill()
+                            }
                         }
                     } else {
                         loadImageFromBundle(named: "background_features").resizable().scaledToFill()
@@ -676,6 +686,7 @@ struct FeaturesView: View {
 // MARK: - CÀI ĐẶT
 struct SettingsView: View {
     @EnvironmentObject private var appState: AppState
+    @ObservedObject private var remoteTheme = RemoteAppTheme.shared
     @ObservedObject private var audioManager = AudioManager.shared
     @ObservedObject private var appLog = AppLog.shared
     @State private var showDiag = false
@@ -686,8 +697,24 @@ struct SettingsView: View {
         ZStack {
             Color.black.ignoresSafeArea()
             GeometryReader { proxy in
-                loadImageFromBundle(named: "background_settings").resizable().scaledToFill().frame(width: proxy.size.width, height: proxy.size.height).clipped()
-            }.ignoresSafeArea().overlay(Color.black.opacity(0.5))
+                Group {
+                    if let raw = remoteTheme.config.settingsBackgroundURL,
+                       let url = URL(string: raw), url.scheme?.lowercased() == "https" {
+                        if remoteTheme.config.settingsBackgroundType == "video" {
+                            LoopingBackgroundVideo(url: url)
+                        } else {
+                            AsyncImage(url: url) { image in
+                                image.resizable().scaledToFill()
+                            } placeholder: {
+                                loadImageFromBundle(named: "background_settings").resizable().scaledToFill()
+                            }
+                        }
+                    } else {
+                        loadImageFromBundle(named: "background_settings").resizable().scaledToFill()
+                    }
+                }
+                .frame(width: proxy.size.width, height: proxy.size.height).clipped()
+            }.ignoresSafeArea().overlay(Color.black.opacity(min(0.9, max(0, remoteTheme.config.overlay ?? 0.5))))
             
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 24) {
