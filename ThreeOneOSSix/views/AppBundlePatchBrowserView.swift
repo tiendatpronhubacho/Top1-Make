@@ -301,6 +301,7 @@ private struct AppBundlePatchDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var patches: [AppBundlePatchItem] = []
     @State private var showingPathPrompt = false
+    @State private var showingBundlePicker = false
     @State private var targetPath = ""
     @State private var showingImporter = false
     @State private var pendingPath: String?
@@ -340,10 +341,15 @@ private struct AppBundlePatchDetailView: View {
                 }
                 Section {
                     Button {
+                        showingBundlePicker = true
+                    } label: {
+                        Label("Duyệt .app để chọn vị trí", systemImage: "folder")
+                    }.disabled(isBusy)
+                    Button {
                         targetPath = ""
                         showingPathPrompt = true
                     } label: {
-                        Label("Thêm file patch", systemImage: "plus")
+                        Label("Nhập đường dẫn thủ công", systemImage: "text.cursor")
                     }.disabled(isBusy)
                 }
             }
@@ -355,6 +361,13 @@ private struct AppBundlePatchDetailView: View {
                 }
             }
             .onAppear(perform: reload)
+            .sheet(isPresented: $showingBundlePicker) {
+                AppBundlePathPickerView(rootPath: app.path) { relativePath in
+                    targetPath = relativePath
+                    showingBundlePicker = false
+                    showingImporter = true
+                }
+            }
             .alert("Đường dẫn trong .app", isPresented: $showingPathPrompt) {
                 TextField("Ví dụ: Frameworks/ABC.framework/Info.plist", text: $targetPath)
                     .textInputAutocapitalization(.never)
@@ -445,5 +458,160 @@ private struct AppBundlePatchDetailView: View {
             }
         }
         reload()
+    }
+}
+
+
+// MARK: - Read-only .app path picker
+
+private struct AppBundlePathPickerView: View {
+    let rootPath: String
+    let onSelect: (String) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var entries: [FileEntry] = []
+    @State private var grantHandle: Int64 = -1
+    @State private var errorMessage: String?
+
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(entries) { entry in
+                    if entry.isDirectory {
+                        NavigationLink {
+                            AppBundlePathDirectoryView(
+                                rootPath: rootPath,
+                                currentPath: entry.path,
+                                onSelect: onSelect
+                            )
+                        } label: {
+                            Label(entry.name, systemImage: "folder")
+                        }
+                    } else {
+                        Button {
+                            guard let relative = relativePath(entry.path) else {
+                                errorMessage = "Đường dẫn nằm ngoài App Bundle."
+                                return
+                            }
+                            onSelect(relative)
+                        } label: {
+                            Label(entry.name, systemImage: "doc")
+                                .foregroundStyle(.primary)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Chọn vị trí trong .app")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Hủy") { dismiss() }
+                }
+            }
+            .onAppear(perform: load)
+            .onDisappear {
+                if grantHandle >= 0 { SandboxAccess.release(grantHandle) }
+                grantHandle = -1
+            }
+            .alert("Không thể duyệt App Bundle", isPresented: Binding(
+                get: { errorMessage != nil },
+                set: { if !$0 { errorMessage = nil } }
+            )) {
+                Button("OK", role: .cancel) { dismiss() }
+            } message: {
+                Text(errorMessage ?? "")
+            }
+        }
+    }
+
+    private func load() {
+        do {
+            if SandboxAccess.backend != .kernel {
+                grantHandle = try SandboxAccess.grantOrThrow(path: rootPath)
+            }
+            entries = try directoryEntries(at: rootPath)
+        } catch {
+            errorMessage = "Không có quyền đọc thư mục .app: \(error.localizedDescription)"
+        }
+    }
+
+    private func relativePath(_ path: String) -> String? {
+        let root = URL(fileURLWithPath: rootPath).standardizedFileURL.path
+        let target = URL(fileURLWithPath: path).standardizedFileURL.path
+        guard target.hasPrefix(root + "/") else { return nil }
+        return String(target.dropFirst(root.count + 1))
+    }
+}
+
+private struct AppBundlePathDirectoryView: View {
+    let rootPath: String
+    let currentPath: String
+    let onSelect: (String) -> Void
+    @State private var entries: [FileEntry] = []
+    @State private var errorMessage: String?
+
+    var body: some View {
+        List {
+            ForEach(entries) { entry in
+                if entry.isDirectory {
+                    NavigationLink {
+                        AppBundlePathDirectoryView(
+                            rootPath: rootPath,
+                            currentPath: entry.path,
+                            onSelect: onSelect
+                        )
+                    } label: {
+                        Label(entry.name, systemImage: "folder")
+                    }
+                } else {
+                    Button {
+                        let root = URL(fileURLWithPath: rootPath).standardizedFileURL.path
+                        let target = URL(fileURLWithPath: entry.path).standardizedFileURL.path
+                        guard target.hasPrefix(root + "/") else {
+                            errorMessage = "Đường dẫn nằm ngoài App Bundle."
+                            return
+                        }
+                        onSelect(String(target.dropFirst(root.count + 1)))
+                    } label: {
+                        Label(entry.name, systemImage: "doc")
+                            .foregroundStyle(.primary)
+                    }
+                }
+            }
+        }
+        .navigationTitle(URL(fileURLWithPath: currentPath).lastPathComponent)
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            do { entries = try directoryEntries(at: currentPath) }
+            catch { errorMessage = error.localizedDescription }
+        }
+        .alert("Lỗi đọc thư mục", isPresented: Binding(
+            get: { errorMessage != nil },
+            set: { if !$0 { errorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { errorMessage = nil }
+        } message: {
+            Text(errorMessage ?? "")
+        }
+    }
+}
+
+private func directoryEntries(at path: String) throws -> [FileEntry] {
+    let urls = try FileManager.default.contentsOfDirectory(
+        at: URL(fileURLWithPath: path, isDirectory: true),
+        includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey, .fileSizeKey],
+        options: [.skipsHiddenFiles]
+    )
+    return urls.compactMap { url in
+        guard let values = try? url.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey, .fileSizeKey]),
+              values.isSymbolicLink != true else { return nil }
+        return FileEntry(
+            name: url.lastPathComponent,
+            path: url.path,
+            isDirectory: values.isDirectory == true,
+            size: Int64(values.fileSize ?? 0)
+        )
+    }.sorted {
+        if $0.isDirectory != $1.isDirectory { return $0.isDirectory }
+        return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
     }
 }
