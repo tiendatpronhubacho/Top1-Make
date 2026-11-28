@@ -178,11 +178,12 @@ enum AppBundlePatchService {
         guard allowedRoots.contains(where: { canonical.hasPrefix($0) }),
               canonical.hasSuffix(".app"),
               !canonical.contains("/../"),
-              let data = try? Data(contentsOf: URL(fileURLWithPath: canonical).appendingPathComponent("Info.plist")),
-              let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any],
-              (plist["CFBundleIdentifier"] as? String) == expectedBundleID else {
+              !expectedBundleID.isEmpty else {
             return nil
         }
+        // LaunchServices supplies the bundle-ID → .app mapping. Do not read
+        // Info.plist before acquiring the OS-specific grant: on newer systems
+        // that metadata itself may be outside the process sandbox.
         return canonical
     }
 
@@ -191,11 +192,20 @@ enum AppBundlePatchService {
         // must grant the actual .app root with write intent and retain the token
         // for the entire transaction. A successful grant is not treated as proof
         // of a successful patch; PatchTransaction performs the real write/verify.
+        let handle: Int64
         if SandboxAccess.backend == .kernel {
-            return try operation()
+            handle = -1
+        } else {
+            handle = try SandboxAccess.grantOrThrow(path: root.path, writable: true)
         }
-        let handle = try SandboxAccess.grantOrThrow(path: root.path, writable: true)
         defer { SandboxAccess.release(handle) }
+
+        let infoURL = root.appendingPathComponent("Info.plist")
+        guard let data = try? Data(contentsOf: infoURL),
+              let plist = (try? PropertyListSerialization.propertyList(from: data, options: [], format: nil)) as? [String: Any],
+              (plist["CFBundleIdentifier"] as? String) != nil else {
+            throw PatchPackageError.targetAppUnavailable(root.lastPathComponent)
+        }
         return try operation()
     }
 }
