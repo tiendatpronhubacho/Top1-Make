@@ -377,7 +377,7 @@ func authorizePatch(action: String, patchID: String? = nil) async throws {
         .rawRepresentation
         .base64EncodedString()
 
-    let payload: [String: Any] = [
+    var payload: [String: Any] = [
         "deviceId": id,
         "licenseKey": key,
         "challenge": challenge,
