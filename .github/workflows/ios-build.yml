@@ -108,7 +108,7 @@ jobs:
               if command_size < 8 or cursor + command_size > command_end:
                   raise SystemExit("Invalid Mach-O load command size")
               if command == 0x19 and command_size >= 72:
-                  segment_name = binary[cursor + 8:cursor + 24].split(b"\\0", 1)[0]
+                  segment_name = binary[cursor + 8:cursor + 24].split(b"\0", 1)[0]
                   if segment_name == b"__TEXT":
                       file_offset, file_size = struct.unpack_from("<QQ", binary, cursor + 40)
                       if not file_size or file_offset + file_size > len(binary):
