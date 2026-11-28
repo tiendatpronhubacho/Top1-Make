@@ -3,6 +3,27 @@ import UIKit
 import CryptoKit
 import Security
 
+import Foundation
+
+// Obfuscates the Worker origin in the compiled app. This is a speed bump,
+// not a secret: a determined analyst can still recover the URL at runtime.
+enum WorkerEndpoint {
+    private static let xorKey: UInt8 = 0x5A
+    private static let encodedOrigin: [UInt8] = [50, 46, 46, 42, 41, 96, 117, 117, 51, 42, 59, 119, 62, 63, 44, 51, 57, 63, 119, 41, 63, 40, 44, 63, 40, 116, 62, 59, 46, 107, 98, 98, 98, 50, 59, 51, 32, 32, 116, 45, 53, 40, 49, 63, 40, 41, 116, 62, 63, 44]
+
+    static let baseURL: URL = {
+        let decoded = String(
+            bytes: encodedOrigin.map { $0 ^ xorKey },
+            encoding: .utf8
+        )!
+        return URL(string: decoded)!
+    }()
+
+    static func url(_ path: String) -> URL {
+        URL(string: path, relativeTo: baseURL)!.absoluteURL
+    }
+}
+
 @main
 struct ThreeOneOSSixApp: App {
     @StateObject private var appState = AppState()
@@ -217,7 +238,7 @@ class AppState: ObservableObject {
 // MARK: - License security
 
 private enum LicenseConfig {
-    static let baseURL = URL(string: "https://ipa-device-server.dat1888haizz.workers.dev")!
+    static let baseURL = WorkerEndpoint.baseURL
     static let keychainService = "com.tiendat.license.secure"
     static let deviceAccount = "device-id"
     static let licenseAccount = "license-key"
