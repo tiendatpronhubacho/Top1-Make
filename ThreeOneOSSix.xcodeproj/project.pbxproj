@@ -180,6 +180,7 @@
 		3105A228 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 3105A120; };
 		3105A211 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3105A031; };
 		3106MUS1 /* background_music.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 3106MUS2; };
+		3106B900 /* AppBundlePatchBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3106B901; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -377,6 +378,7 @@
 		3106S102 /* PlistEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlistEditorView.swift; sourceTree = "<group>"; };
 		3106S103 /* FileInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileInfoView.swift; sourceTree = "<group>"; };
 		3106MUS2 /* background_music.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = background_music.mp3; sourceTree = "<group>"; };
+		3106B901 /* AppBundlePatchBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppBundlePatchBrowserView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -494,6 +496,7 @@
 				3105D14C /* WiFiShareView.swift */,
 				3105D14D /* UnlockView.swift */,
 				3105D14E /* UnlockBanner.swift */,
+				3106B901 /* AppBundlePatchBrowserView.swift */,
 			);
 			path = views;
 			sourceTree = "<group>";
@@ -718,6 +721,7 @@
 				3105A227,
 				3105A233,
 				3105A234,
+				3106B900,
 				3105A235,
 				3105A236,
 				3105A237,
