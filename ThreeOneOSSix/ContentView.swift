@@ -357,8 +357,7 @@ struct HomeView: View {
                                 .foregroundStyle(Color(remoteHex: remoteTheme.config.accent))
                             Text(announcement)
                                 .font(.system(size: 13, weight: .semibold, design: .rounded))
-                                .foregroundStyle(.white)
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .foregroundStyle(.white)                                .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         .padding(12)
                         .background(Color.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 14))
@@ -485,6 +484,7 @@ struct HomeView: View {
 
 // MARK: - TRANG CHỨC NĂNG
 struct FeaturesView: View {
+    @EnvironmentObject private var licenseManager: LicenseManager
     @Environment(\.scenePhase) private var scenePhase
     @ObservedObject private var remoteTheme = RemoteAppTheme.shared
     @ObservedObject var patchStore: PatchProjectStore
@@ -498,7 +498,6 @@ struct FeaturesView: View {
     }
     @State private var currentScreen = 0
     @State private var selectedCategory: PatchCategory = .aim
-    @State private var showAppBundlePatch = false
 
     private enum PatchCategory: String, CaseIterable {
         case aim = "AIM"
@@ -610,30 +609,6 @@ struct FeaturesView: View {
                                 .padding().background(Color.white.opacity(themeCardOpacity), in: RoundedRectangle(cornerRadius: 16)).overlay(RoundedRectangle(cornerRadius: 16).stroke(themeAccent.opacity(0.45), lineWidth: 0.7))
                             }.buttonStyle(.plain)
 
-                            Button {
-                                showAppBundlePatch = true
-                            } label: {
-                                HStack(spacing: 12) {
-                                    Image(systemName: "shippingbox.fill")
-                                        .font(.title2)
-                                        .foregroundStyle(.white)
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text("App Bundle Patch")
-                                            .font(.headline)
-                                            .foregroundStyle(.white)
-                                        Text("Quản lý và thay thế tệp bên trong ứng dụng")
-                                            .font(.caption)
-                                            .foregroundStyle(.white.opacity(0.7))
-                                    }
-                                    Spacer()
-                                    Image(systemName: "chevron.right")
-                                        .foregroundStyle(.white.opacity(0.5))
-                                }
-                                .padding()
-                                .background(Color.white.opacity(themeCardOpacity), in: RoundedRectangle(cornerRadius: 16))
-                                .overlay(RoundedRectangle(cornerRadius: 16).stroke(themeAccent.opacity(0.45), lineWidth: 0.7))
-                            }
-                            .buttonStyle(.plain)
                         } else if currentScreen == 1 {
                             HStack(spacing: 10) {
                                 menuButton(title: "AIM", subtitle: remoteTheme.config.patchAimNote ?? "", icon: "scope") {
@@ -650,15 +625,14 @@ struct FeaturesView: View {
                                 }
                             }
                         } else if currentScreen == 2 {
-                            patchList()
+                            if selectedCategory == .location {
+                                LocationReplacementFilesView(licenseManager: licenseManager)
+                            } else {
+                                patchList()
+                            }
                         }
                     }.padding(.horizontal, 18).padding(.bottom, 20)
                 }
-            }
-        }
-        .sheet(isPresented: $showAppBundlePatch) {
-            NavigationStack {
-                AppBundlePatchBrowserView()
             }
         }
         // Custom Binding đánh chặn thông báo thành công
@@ -717,8 +691,7 @@ struct FeaturesView: View {
                 Image(systemName: icon).font(.system(size: 30)).foregroundStyle(themeAccent)
                 Text(title).font(.headline).foregroundStyle(.white)
                 if !subtitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Text(subtitle)
-                        .font(.system(size: 10, weight: .medium, design: .rounded))
+                    Text(subtitle)                        .font(.system(size: 10, weight: .medium, design: .rounded))
                         .foregroundStyle(.white.opacity(0.72))
                         .multilineTextAlignment(.center)
                         .lineLimit(2)
