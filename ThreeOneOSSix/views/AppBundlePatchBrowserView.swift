@@ -361,11 +361,16 @@ private struct AppBundlePatchDetailView: View {
                 }
             }
             .onAppear(perform: reload)
-            .sheet(isPresented: $showingBundlePicker) {
+            .sheet(
+                isPresented: $showingBundlePicker,
+                onDismiss: {
+                    if pendingPath != nil { showingImporter = true }
+                }
+            ) {
                 AppBundlePathPickerView(rootPath: app.path) { relativePath in
                     targetPath = relativePath
+                    pendingPath = relativePath
                     showingBundlePicker = false
-                    showingImporter = true
                 }
             }
             .alert("Đường dẫn trong .app", isPresented: $showingPathPrompt) {
