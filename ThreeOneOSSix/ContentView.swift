@@ -251,11 +251,13 @@ struct ContentView: View {
 private struct LicensedContentView: View {
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var remoteTheme = RemoteAppTheme.shared
+    @ObservedObject private var licenseManager: LicenseManager
 
     @StateObject private var patchStore: PatchProjectStore
     @State private var selectedTab = 0
 
     init(licenseManager: LicenseManager) {
+        _licenseManager = ObservedObject(wrappedValue: licenseManager)
         _patchStore = StateObject(
             wrappedValue: PatchProjectStore(
                 licenseManager: licenseManager
@@ -265,7 +267,7 @@ private struct LicensedContentView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            HomeView(patchStore: patchStore)
+            HomeView(licenseManager: licenseManager, patchStore: patchStore)
                 .tabItem {
                     Label(remoteTheme.config.tabHome ?? "Trang chủ", systemImage: "house")
                 }
@@ -304,6 +306,7 @@ private struct LicensedContentView: View {
 // MARK: - TRANG CHỦ
 struct HomeView: View {
     @EnvironmentObject private var appState: AppState
+    @ObservedObject var licenseManager: LicenseManager
     @ObservedObject private var remoteTheme = RemoteAppTheme.shared
     @ObservedObject var patchStore: PatchProjectStore
     @State private var showCleaner = false
@@ -363,6 +366,18 @@ struct HomeView: View {
                         statusRow(icon: "apple.logo", title: "iOS", value: AppInfo.osVersion)
                         statusRow(icon: "iphone", title: "Device", value: AppInfo.displayMachineName)
                         statusRow(icon: "checkmark.seal.fill", title: "Support", value: appState.isSupported ? "SUPPORTED" : "UNSUPPORTED", color: appState.isSupported ? .green : .red)
+                        statusRow(
+                            icon: "key.fill",
+                            title: "License Key",
+                            value: licenseManager.isLicensed ? "ĐANG HOẠT ĐỘNG" : licenseManager.licenseStatus,
+                            color: licenseManager.isLicensed ? .green : .red
+                        )
+                        statusRow(
+                            icon: "calendar",
+                            title: "Hạn sử dụng",
+                            value: licenseExpiryText,
+                            color: licenseManager.expiresAt.map { $0 > Date() ? .white : .red } ?? .green
+                        )
                     }
                     .padding(16)
                     .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
@@ -437,6 +452,16 @@ struct HomeView: View {
                 UnlockView()
             }
         }
+    }
+
+    private var licenseExpiryText: String {
+        guard licenseManager.isLicensed else { return "Chưa xác thực" }
+        guard let expiry = licenseManager.expiresAt else { return "Vĩnh viễn" }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "vi_VN")
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: expiry)
     }
 
     private func statusRow(icon: String, title: String, value: String, color: Color = .white) -> some View {
