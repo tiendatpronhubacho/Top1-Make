@@ -508,98 +508,15 @@ func authorizePatch(action: String, patchID: String? = nil) async throws {
             throw LicenseFailure.server("official_ipa_required")
         }
 
-        // Verify the executable's immutable __TEXT segment before trusting the
-        // build identity. The code-signature blob is outside __TEXT, so normal
-        // re-signing does not invalidate this digest.
-        guard let expectedTextHash = Bundle.main.object(forInfoDictionaryKey: "IPAExecutableTextSHA256") as? String,
-              expectedTextHash.range(of: "^[a-f0-9]{64}$", options: .regularExpression) != nil else {
-            throw LicenseFailure.server("binary_integrity_manifest_missing")
-        }
-        let actualTextHash = try executableTextSegmentSHA256()
-        guard actualTextHash == expectedTextHash else {
-            log("security: executable __TEXT hash mismatch; refusing license authorization")
-            throw LicenseFailure.server("binary_integrity_failed")
-        }
-
+        // ESign may rewrite or inject data into the Mach-O executable while re-signing.
+        // Keep the official IPA marker/build ID check here; the Worker independently
+        // checks the approved build hash and the device-bound License challenge.
         let rawID = String(storedID.dropFirst("TIENDAT-OFFICIAL-BUILD-ID:".count)).lowercased()
         guard let buildID = UUID(uuidString: rawID) else {
             throw LicenseFailure.server("official_ipa_required")
         }
         let canonicalID = buildID.uuidString.lowercased()
         return SHA256.hash(data: Data(canonicalID.utf8)).map { String(format: "%02x", $0) }.joined()
-    }
-
-    /// Hashes the Mach-O __TEXT segment, not the entire executable. iOS
-    /// re-signing changes the code-signature area but leaves __TEXT unchanged.
-    private func executableTextSegmentSHA256() throws -> String {
-        guard let executableURL = Bundle.main.executableURL else {
-            throw LicenseFailure.server("binary_integrity_unavailable")
-        }
-        let executable = try Data(contentsOf: executableURL, options: .mappedIfSafe)
-
-        func u32(_ offset: Int) throws -> UInt32 {
-            guard offset >= 0, offset <= executable.count - 4 else {
-                throw LicenseFailure.server("binary_integrity_invalid_macho")
-            }
-            return UInt32(executable[offset])
-                | (UInt32(executable[offset + 1]) << 8)
-                | (UInt32(executable[offset + 2]) << 16)
-                | (UInt32(executable[offset + 3]) << 24)
-        }
-
-        func u64(_ offset: Int) throws -> UInt64 {
-            guard offset >= 0, offset <= executable.count - 8 else {
-                throw LicenseFailure.server("binary_integrity_invalid_macho")
-            }
-            var value: UInt64 = 0
-            for index in 0..<8 {
-                value |= UInt64(executable[offset + index]) << (index * 8)
-            }
-            return value
-        }
-
-        // Current release workflow produces a thin arm64 iOS executable.
-        guard executable.count >= 32, try u32(0) == 0xfeedfacf else {
-            throw LicenseFailure.server("binary_integrity_unsupported_macho")
-        }
-
-        let commandCount = Int(try u32(16))
-        let commandBytes = Int(try u32(20))
-        guard commandCount > 0, commandCount <= 10000,
-              commandBytes <= executable.count - 32 else {
-            throw LicenseFailure.server("binary_integrity_invalid_macho")
-        }
-
-        var cursor = 32
-        let commandEnd = 32 + commandBytes
-        for _ in 0..<commandCount {
-            let command = try u32(cursor)
-            let commandSize = Int(try u32(cursor + 4))
-            guard commandSize >= 8, cursor <= commandEnd, commandSize <= commandEnd - cursor else {
-                throw LicenseFailure.server("binary_integrity_invalid_macho")
-            }
-
-            if command == 0x19, commandSize >= 72 { // LC_SEGMENT_64
-                let nameData = executable.subdata(in: (cursor + 8)..<(cursor + 24))
-                let segmentName = String(decoding: nameData.prefix { $0 != 0 }, as: UTF8.self)
-                if segmentName == "__TEXT" {
-                    let fileOffset = try u64(cursor + 40)
-                    let fileSize = try u64(cursor + 48)
-                    guard fileSize > 0, fileOffset <= UInt64(executable.count),
-                          fileSize <= UInt64(executable.count) - fileOffset,
-                          fileOffset <= UInt64(Int.max), fileSize <= UInt64(Int.max) else {
-                        throw LicenseFailure.server("binary_integrity_invalid_text_segment")
-                    }
-                    let start = Int(fileOffset)
-                    let end = start + Int(fileSize)
-                    let textBytes = executable.subdata(in: start..<end)
-                    return SHA256.hash(data: textBytes)
-                        .map { String(format: "%02x", $0) }.joined()
-                }
-            }
-            cursor += commandSize
-        }
-        throw LicenseFailure.server("binary_integrity_text_segment_missing")
     }
 
     private func canonical(challenge: String, action: String, deviceID: String, licenseKey: String, buildHash: String, patchID: String? = nil) -> String {
