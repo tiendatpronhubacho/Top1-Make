@@ -299,6 +299,7 @@ struct AppBundlePatchBrowserView: View {
 private struct AppBundlePatchDetailView: View {
     let app: InstalledAppBundle
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var licenseManager: LicenseManager
     @State private var patches: [AppBundlePatchItem] = []
     @State private var showingPathPrompt = false
     @State private var showingBundlePicker = false
@@ -432,23 +433,38 @@ private struct AppBundlePatchDetailView: View {
     private func toggle(_ patch: AppBundlePatchItem, enabled: Bool) {
         guard !isBusy else { return }
         isBusy = true
-        DispatchQueue.global(qos: .userInitiated).async {
+        Task { @MainActor in
             do {
                 if enabled {
-                    try AppBundlePatchService.apply(patch)
-                } else {
-                    try AppBundlePatchService.restore(patch)
+                    // Bundle patches use the same server-side license gate as
+                    // App Data patches; local filesystem access alone is not authorization.
+                    try await licenseManager.authorizePatch(
+                        action: "patch_apply",
+                        patchID: patch.id.uuidString
+                    )
                 }
-                DispatchQueue.main.async {
-                    isBusy = false
-                    reload()
+                DispatchQueue.global(qos: .userInitiated).async {
+                    do {
+                        if enabled {
+                            try AppBundlePatchService.apply(patch)
+                        } else {
+                            try AppBundlePatchService.restore(patch)
+                        }
+                        DispatchQueue.main.async {
+                            isBusy = false
+                            reload()
+                        }
+                    } catch {
+                        DispatchQueue.main.async {
+                            isBusy = false
+                            errorMessage = "Không thể \(enabled ? "bật" : "tắt") Bundle Patch. \(error.localizedDescription)"
+                            reload()
+                        }
+                    }
                 }
             } catch {
-                DispatchQueue.main.async {
-                    isBusy = false
-                    errorMessage = "Không thể \(enabled ? "bật" : "tắt") Bundle Patch. \(error.localizedDescription)"
-                    reload()
-                }
+                isBusy = false
+                errorMessage = "License không cho phép bật Bundle Patch: \(error.localizedDescription)"
             }
         }
     }
