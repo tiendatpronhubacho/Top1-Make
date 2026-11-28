@@ -339,6 +339,9 @@ func authorizePatch(action: String, patchID: String? = nil) async throws {
           action == "patch_apply" else {
         throw LicenseFailure.server("invalid_patch_action")
     }
+    guard let patchID, !patchID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+        throw LicenseFailure.server("patch_id_required")
+    }
 
     guard isLicensed else {
         throw LicenseFailure.server("license_invalid")
@@ -384,9 +387,7 @@ func authorizePatch(action: String, patchID: String? = nil) async throws {
         "signature": signature,
         "buildHash": buildHash
     ]
-    if action == "patch_apply", let patchID, !patchID.isEmpty {
-        payload["patchId"] = patchID
-    }
+    payload["patchId"] = patchID
 
     let endpoint = action == "patch_download"
         ? "/v2/patch/authorize-download"
@@ -417,7 +418,7 @@ func authorizePatch(action: String, patchID: String? = nil) async throws {
         let signingKey = try getOrCreateSigningKey()
         let buildHash = try currentBuildHash()
         let challenge = try await requestChallenge(deviceID: id, action: "patch_download", buildHash: buildHash)
-        let message = canonical(challenge: challenge, action: "patch_download", deviceID: id, licenseKey: key, buildHash: buildHash)
+        let message = canonical(challenge: challenge, action: "patch_download", deviceID: id, licenseKey: key, buildHash: buildHash, patchID: patchID)
         let signature = try signingKey.signature(for: Data(message.utf8))
             .rawRepresentation.base64EncodedString()
 
@@ -495,7 +496,8 @@ func authorizePatch(action: String, patchID: String? = nil) async throws {
 
     private func canonical(challenge: String, action: String, deviceID: String, licenseKey: String, buildHash: String, patchID: String? = nil) -> String {
         let base = "\(challenge)\n\(action)\n\(deviceID)\n\(licenseKey)\n\(buildHash)"
-        guard action == "patch_apply", let patchID, !patchID.isEmpty else { return base }
+        guard (action == "patch_apply" || action == "patch_download"),
+              let patchID, !patchID.isEmpty else { return base }
         return base + "\n" + patchID
     }
 
