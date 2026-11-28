@@ -494,6 +494,7 @@ struct FeaturesView: View {
     }
     @State private var currentScreen = 0
     @State private var selectedCategory: PatchCategory = .aim
+    @State private var showAppBundlePatch = false
 
     private enum PatchCategory: String, CaseIterable {
         case aim = "AIM"
@@ -601,6 +602,31 @@ struct FeaturesView: View {
                                 }
                                 .padding().background(Color.white.opacity(themeCardOpacity), in: RoundedRectangle(cornerRadius: 16)).overlay(RoundedRectangle(cornerRadius: 16).stroke(themeAccent.opacity(0.45), lineWidth: 0.7))
                             }.buttonStyle(.plain)
+
+                            Button {
+                                showAppBundlePatch = true
+                            } label: {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "shippingbox.fill")
+                                        .font(.title2)
+                                        .foregroundStyle(.white)
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("App Bundle Patch")
+                                            .font(.headline)
+                                            .foregroundStyle(.white)
+                                        Text("Quản lý và thay thế tệp bên trong ứng dụng")
+                                            .font(.caption)
+                                            .foregroundStyle(.white.opacity(0.7))
+                                    }
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .foregroundStyle(.white.opacity(0.5))
+                                }
+                                .padding()
+                                .background(Color.white.opacity(themeCardOpacity), in: RoundedRectangle(cornerRadius: 16))
+                                .overlay(RoundedRectangle(cornerRadius: 16).stroke(themeAccent.opacity(0.45), lineWidth: 0.7))
+                            }
+                            .buttonStyle(.plain)
                         } else if currentScreen == 1 {
                             HStack(spacing: 10) {
                                 menuButton(title: "AIM", subtitle: remoteTheme.config.patchAimNote ?? "", icon: "scope") {
@@ -621,6 +647,11 @@ struct FeaturesView: View {
                         }
                     }.padding(.horizontal, 18).padding(.bottom, 20)
                 }
+            }
+        }
+        .sheet(isPresented: $showAppBundlePatch) {
+            NavigationStack {
+                AppBundlePatchBrowserView()
             }
         }
         // Custom Binding đánh chặn thông báo thành công
