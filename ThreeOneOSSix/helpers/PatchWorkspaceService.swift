@@ -21,7 +21,19 @@ enum PatchWorkspaceService {
 
     static func patchesRootURL(fileManager: FileManager = .default) throws -> URL {
         let documents = try documentsRootURL(fileManager: fileManager)
-        let root = documents.appendingPathComponent("Patches", isDirectory: true)
+        // Keep editable project workspaces out of ordinary Files/Filza listings.
+        // Existing workspaces are moved intact on the first launch after update.
+        let legacyRoot = documents.appendingPathComponent("Patches", isDirectory: true)
+        let root = documents.appendingPathComponent(".Patches", isDirectory: true)
+        if !fileManager.fileExists(atPath: root.path),
+           fileManager.fileExists(atPath: legacyRoot.path) {
+            do {
+                try fileManager.moveItem(at: legacyRoot, to: root)
+            } catch {
+                // Preserve the old workspace if the move is not possible.
+                log("patch: hidden workspace migration deferred")
+            }
+        }
         try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
         return root
     }
