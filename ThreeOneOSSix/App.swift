@@ -535,17 +535,39 @@ func authorizePatch(action: String, patchID: String? = nil) async throws {
     private func post<T: Decodable>(_ path: String, payload: [String: Any]) async throws -> T {
         var request = URLRequest(url: URL(string: LicenseConfig.baseURL.absoluteString + path)!)
         request.httpMethod = "POST"
-        request.timeoutInterval = 15
+        request.timeoutInterval = 30
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.httpBody = try JSONSerialization.data(withJSONObject: payload)
-        let (data, response) = try await URLSession.shared.data(for: request)
+
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch let urlError as URLError {
+            if urlError.code == .timedOut {
+                throw LicenseFailure.timedOut
+            }
+            switch urlError.code {
+            case .notConnectedToInternet, .networkConnectionLost, .cannotFindHost,
+                 .cannotConnectToHost, .dnsLookupFailed, .dataNotAllowed:
+                throw LicenseFailure.network
+            default:
+                throw LicenseFailure.network
+            }
+        }
+
         guard let http = response as? HTTPURLResponse else { throw LicenseFailure.network }
         guard (200..<300).contains(http.statusCode) else {
-            let apiError = (try? JSONDecoder().decode(LicenseResult.self, from: data))?.error ?? "http_\(http.statusCode)"
+            let apiError = (try? JSONDecoder().decode(LicenseResult.self, from: data))?.error
+                ?? (http.statusCode == 429 ? "rate_limited" : "http_\(http.statusCode)")
             throw LicenseFailure.server(apiError)
         }
-        return try JSONDecoder().decode(T.self, from: data)
+        do {
+            return try JSONDecoder().decode(T.self, from: data)
+        } catch {
+            throw LicenseFailure.server("invalid_server_response")
+        }
     }
 
     private func getOrCreateDeviceID() throws -> String {
@@ -618,28 +640,38 @@ func authorizePatch(action: String, patchID: String? = nil) async throws {
 }
 
 private enum LicenseFailure: LocalizedError {
-    case network, keyStorage
+    case network, timedOut, keyStorage
     case server(String)
+
     var errorDescription: String? {
         switch self {
-        case .network: return "Không kết nối được máy chủ License. Hãy kiểm tra Internet."
-        case .keyStorage: return "Không thể truy cập Keychain hoặc Secure Enclave trên thiết bị này."
+        case .network:
+            return "Không thể kết nối máy chủ License. Kiểm tra Internet rồi thử lại."
+        case .timedOut:
+            return "Máy chủ phản hồi quá lâu (hết thời gian chờ). Vui lòng thử lại sau."
+        case .keyStorage:
+            return "Không thể truy cập Keychain hoặc Secure Enclave trên thiết bị này."
         case .server(let code):
             let messages: [String: String] = [
-    "license_invalid": "License Key không tồn tại hoặc đã bị vô hiệu hóa.",
-    "license_expired": "License Key đã hết hạn.",
-    "device_blocked": "Thiết bị này đã bị quản trị viên khóa.",
-    "device_limit_reached": "License đã đạt giới hạn thiết bị.",
-    "device_already_bound": "Device ID này đã liên kết với License khác.",
-    "device_key_mismatch": "Khóa bảo mật thiết bị không khớp. Hãy liên hệ quản trị viên để gỡ liên kết.",
-    "device_not_registered": "Thiết bị chưa được đăng ký với License này.",
-    "maintenance": "Máy chủ đang bảo trì. Không thể thực hiện Patch.",
-    "server_locked": "Máy chủ đã bị khóa khẩn cấp. Không thể thực hiện Patch.",
-    "patch_authorization_denied": "Máy chủ từ chối quyền thực hiện Patch.",
-    "invalid_patch_action": "Hành động Patch không hợp lệ.",
-    "official_ipa_required": "Bản IPA này chưa được quản trị viên duyệt. Vui lòng cài đặt IPA chính thức mới nhất."
-]
-            return messages[code] ?? "Xác thực thất bại: \(code)"
+                "license_invalid": "License Key không tồn tại hoặc đã bị vô hiệu hóa.",
+                "license_expired": "License Key đã hết hạn.",
+                "device_blocked": "Thiết bị này đã bị quản trị viên khóa.",
+                "device_limit_reached": "License đã đạt giới hạn thiết bị.",
+                "device_already_bound": "Device ID này đã liên kết với License khác.",
+                "device_key_mismatch": "Khóa bảo mật thiết bị không khớp. Hãy liên hệ quản trị viên để gỡ liên kết.",
+                "device_not_registered": "Thiết bị chưa được đăng ký với License này.",
+                "rate_limited": "Bạn thao tác quá nhanh. Vui lòng chờ khoảng 1 phút rồi thử lại.",
+                "challenge_expired": "Phiên xác thực đã hết hạn. Vui lòng thử kích hoạt lại.",
+                "challenge_failed": "Không tạo được phiên xác thực. Vui lòng thử lại sau.",
+                "invalid_server_response": "Máy chủ trả về dữ liệu không hợp lệ. Vui lòng thử lại sau.",
+                "maintenance": "Máy chủ đang bảo trì. Vui lòng thử lại sau.",
+                "server_maintenance": "Máy chủ đang bảo trì. Vui lòng thử lại sau.",
+                "server_locked": "Máy chủ đã bị khóa khẩn cấp. Không thể xác thực License.",
+                "patch_authorization_denied": "Máy chủ từ chối quyền thực hiện Patch.",
+                "invalid_patch_action": "Hành động Patch không hợp lệ.",
+                "official_ipa_required": "Bản IPA này chưa được quản trị viên duyệt. Vui lòng cài đặt IPA chính thức mới nhất."
+            ]
+            return messages[code] ?? "Xác thực chưa thành công. Mã lỗi: \(code)"
         }
     }
 }
