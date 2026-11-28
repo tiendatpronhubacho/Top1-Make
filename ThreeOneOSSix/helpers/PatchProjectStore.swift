@@ -179,8 +179,8 @@ final class PatchProjectStore: ObservableObject {
     }
 
     private func workerPatchList(target: String) async throws -> [WorkerPatch] {
-        guard let baseURL = URL(string: "https://ipa-device-server.dat1888haizz.workers.dev/v2/patches"),
-              var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false) else {
+        let baseURL = WorkerEndpoint.url("/v2/patches")
+        guard var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false) else {
             throw NSError(domain: "WorkerPatchList", code: -1,
                           userInfo: [NSLocalizedDescriptionKey: "URL không hợp lệ"])
         }
