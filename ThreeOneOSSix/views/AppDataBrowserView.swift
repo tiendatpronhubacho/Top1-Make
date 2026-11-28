@@ -109,6 +109,14 @@ struct AppDataBrowserView: View {
                     FilesTabToolbarButton(session: $tabSession)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink {
+                        AppBundlePatchBrowserView()
+                    } label: {
+                        Image(systemName: "shippingbox")
+                    }
+                    .accessibilityLabel("App Bundle Patch")
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
                     sortMenu
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
