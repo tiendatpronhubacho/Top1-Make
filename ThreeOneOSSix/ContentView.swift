@@ -62,6 +62,12 @@ private final class RemoteAppTheme: ObservableObject {
     }
 }
 
+private func playableThemeVideoURL(_ originalURL: URL) -> URL {
+    var components = URLComponents(url: WorkerEndpoint.url("/v2/theme/media"), resolvingAgainstBaseURL: false)
+    components?.queryItems = [URLQueryItem(name: "url", value: originalURL.absoluteString)]
+    return components?.url ?? originalURL
+}
+
 private struct LoopingBackgroundVideo: UIViewRepresentable {
     let url: URL
 
@@ -258,7 +264,7 @@ struct HomeView: View {
                     if let raw = remoteTheme.config.homeBackgroundURL ?? remoteTheme.config.backgroundURL,
                        let url = URL(string: raw), url.scheme?.lowercased() == "https" {
                         if (remoteTheme.config.homeBackgroundType ?? remoteTheme.config.backgroundType) == "video" {
-                            LoopingBackgroundVideo(url: url)
+                            LoopingBackgroundVideo(url: playableThemeVideoURL(url))
                         } else {
                             AsyncImage(url: url) { image in
                                 image.resizable().scaledToFill()
@@ -459,7 +465,7 @@ struct FeaturesView: View {
                     if let raw = remoteTheme.config.featuresBackgroundURL ?? remoteTheme.config.homeBackgroundURL ?? remoteTheme.config.backgroundURL,
                        let url = URL(string: raw), url.scheme?.lowercased() == "https" {
                         if (remoteTheme.config.featuresBackgroundType ?? remoteTheme.config.homeBackgroundType ?? remoteTheme.config.backgroundType) == "video" {
-                            LoopingBackgroundVideo(url: url)
+                            LoopingBackgroundVideo(url: playableThemeVideoURL(url))
                         } else {
                             AsyncImage(url: url) { image in
                                 image.resizable().scaledToFill()
@@ -701,7 +707,7 @@ struct SettingsView: View {
                     if let raw = remoteTheme.config.settingsBackgroundURL,
                        let url = URL(string: raw), url.scheme?.lowercased() == "https" {
                         if remoteTheme.config.settingsBackgroundType == "video" {
-                            LoopingBackgroundVideo(url: url)
+                            LoopingBackgroundVideo(url: playableThemeVideoURL(url))
                         } else {
                             AsyncImage(url: url) { image in
                                 image.resizable().scaledToFill()
