@@ -451,7 +451,7 @@ final class PatchProjectStore: ObservableObject {
 
     /// Re-check the Admin's live enabled list immediately before every apply.
     /// A cached package is never sufficient authorization to activate a patch.
-    private func isWorkerPatchEnabled(_ item: PatchLibraryItem) async throws -> Bool {
+    private func isWorkerPatchEnabled(_ item: PatchLibraryItem) async throws -> WorkerPatch? {
         let filename = item.packageURL.lastPathComponent
         let target = item.packageURL.pathExtension
         guard ["3105", "3106"].contains(target),
@@ -467,7 +467,7 @@ final class PatchProjectStore: ObservableObject {
                   return item.id == remoteID
               }) else {
             log("patch: activation denied; local package has no matching Admin name: \(filename)")
-            return false
+            return nil
         }
 
         let patches = try await workerPatchList(target: target)
@@ -476,7 +476,7 @@ final class PatchProjectStore: ObservableObject {
             normalizedRemotePatchName($0.name) == normalizedRemotePatchName(metadata.name)
         }) else {
             log("patch: activation denied; Admin has disabled or removed \(metadata.name)")
-            return false
+            return nil
         }
 
         let data = try Data(contentsOf: item.packageURL)
@@ -484,10 +484,10 @@ final class PatchProjectStore: ObservableObject {
             .map { String(format: "%02x", $0) }.joined()
         guard actualHash.caseInsensitiveCompare(patch.sha256) == .orderedSame else {
             log("patch: activation denied; cached package hash mismatch \(filename)")
-            return false
+            return nil
         }
         _ = try PatchPackageCodec.inspect(data)
-        return true
+        return patch
     }
 
     private func updateLoadIssues() {
@@ -522,21 +522,19 @@ func applyPatch(_ item: PatchLibraryItem) {
         guard let self else { return }
 
         do {
-            // Run the live Admin-enabled check and signed License authorization
-            // at the same time, rather than waiting for two network round trips in series.
-            async let enabledCheck = self.isWorkerPatchEnabled(item)
-            async let licenseAuthorization: Void = self.licenseManager.authorizePatch(
-                action: "patch_apply"
-            )
-            let (isEnabled, _) = try await (enabledCheck, licenseAuthorization)
-
-            guard isEnabled else {
+            // Confirm the current Admin list and package hash before requesting
+            // a device signature bound to this exact remote Patch ID.
+            guard let enabledPatch = try await self.isWorkerPatchEnabled(item) else {
                 throw NSError(
                     domain: "WorkerPatchAuthorization",
                     code: 403,
                     userInfo: [NSLocalizedDescriptionKey: "Patch chưa được bật hoặc đã bị tắt trên Admin"]
                 )
             }
+            try await self.licenseManager.authorizePatch(
+                action: "patch_apply",
+                patchID: enabledPatch.id
+            )
             _ = try await DevicePatchService.apply(
                 project: project,
                 licenseManager: self.licenseManager,
