@@ -121,6 +121,22 @@ struct FeatureHubView: View {
                     }
 
                     NavigationLink {
+                        AppBundlePatchBrowserView()
+                    } label: {
+                        HStack(spacing: 12) {
+                            AppRowIcon(systemName: "shippingbox")
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("App Bundle Patch")
+                                    .foregroundStyle(.primary)
+                                Text("Browse and manage files inside installed app bundles")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .padding(.vertical, 2)
+                    }
+
+                    NavigationLink {
                         RepositoryNewView(
                             onOpenSettings: onOpenSettings,
                             onOpenLogs: onOpenLogs
