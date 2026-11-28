@@ -144,7 +144,7 @@ enum AppBundlePatchService {
         let requiredIDs = try PatchTransaction.requiredBundleIdentifiers(for: receipt)
         guard requiredIDs == [item.bundleID] else { throw PatchPackageError.restoreFailed }
         let root = try resolveBundleRoot(bundleID: item.bundleID)
-        try withBundleGrant(root: root) {
+        try withBundleGrant(root: root, expectedBundleID: item.bundleID) {
             try PatchTransaction.restore(
                 receipt: receipt,
                 allowChangedTargets: allowChangedTargets,
