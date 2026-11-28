@@ -7,6 +7,9 @@ private struct RemoteThemeEnvelope: Decodable {
 }
 
 private struct RemoteThemeConfig: Codable {
+    var musicEnabled: Bool?
+    var musicVolume: Double?
+    var musicURL: String?
     var title: String?
     var subtitle: String?
     var backgroundURL: String?
@@ -53,6 +56,7 @@ private final class RemoteAppTheme: ObservableObject {
             let payload = try JSONDecoder().decode(RemoteThemeEnvelope.self, from: data)
             guard let latest = payload.theme else { return }
             config = latest
+            AudioManager.shared.applyRemoteSettings(enabled: latest.musicEnabled ?? true, volume: latest.musicVolume ?? 0.5, url: latest.musicURL)
             if let cached = try? JSONEncoder().encode(latest) {
                 UserDefaults.standard.set(cached, forKey: cacheKey)
             }
@@ -135,30 +139,76 @@ private extension Color {
 }
 
 // MARK: - QUẢN LÝ NHẠC NỀN
-class AudioManager: ObservableObject {
+@MainActor
+final class AudioManager: ObservableObject {
     static let shared = AudioManager()
     private var player: AVAudioPlayer?
-    
+    private var remoteURL: URL?
+    private var remoteEnabled = true
+    private var remoteVolume: Float = 0.5
+    private var loadTask: Task<Void, Never>?
+
     @Published var isPlaying: Bool = UserDefaults.standard.bool(forKey: "background_music_enabled") {
         didSet {
             UserDefaults.standard.set(isPlaying, forKey: "background_music_enabled")
-            if isPlaying { play() } else { stop() }
+            if isPlaying && remoteEnabled { play() } else { stop() }
         }
     }
-    
-    init() { if isPlaying { play() } }
-    
+
+    init() { }
+
+    func applyRemoteSettings(enabled: Bool, volume: Double, url: String?) {
+        remoteEnabled = enabled
+        remoteVolume = Float(min(1, max(0, volume)))
+        let nextURL = URL(string: url ?? "").flatMap { $0.scheme?.lowercased() == "https" ? $0 : nil }
+        let changedURL = remoteURL != nextURL
+        remoteURL = nextURL
+        player?.volume = remoteVolume
+        guard remoteEnabled else { stop(); return }
+        if isPlaying && (changedURL || player == nil) { play() }
+    }
+
     func play() {
-        guard let url = Bundle.main.url(forResource: "background_music", withExtension: "mp3") else { return }
+        guard remoteEnabled else { return }
+        loadTask?.cancel()
         do {
             try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.mixWithOthers])
             try AVAudioSession.sharedInstance().setActive(true)
+        } catch { print("Lỗi cấu hình âm thanh: \\(error)") }
+
+        if let url = remoteURL {
+            loadTask = Task { [weak self] in
+                do {
+                    let (data, response) = try await URLSession.shared.data(from: url)
+                    guard let self, !Task.isCancelled,
+                          (response as? HTTPURLResponse)?.statusCode == 200 else { return }
+                    let audio = try AVAudioPlayer(data: data)
+                    audio.numberOfLoops = -1
+                    audio.volume = self.remoteVolume
+                    audio.prepareToPlay()
+                    self.player?.stop()
+                    self.player = audio
+                    audio.play()
+                } catch {
+                    print("Không tải được nhạc nền từ máy chủ: \\(error)")
+                }
+            }
+            return
+        }
+
+        guard let url = Bundle.main.url(forResource: "background_music", withExtension: "mp3") else { return }
+        do {
             player = try AVAudioPlayer(contentsOf: url)
             player?.numberOfLoops = -1
+            player?.volume = remoteVolume
             player?.play()
-        } catch { print("Lỗi phát nhạc: \(error)") }
+        } catch { print("Lỗi phát nhạc: \\(error)") }
     }
-    func stop() { player?.stop() }
+
+    func stop() {
+        loadTask?.cancel()
+        player?.stop()
+    }
 }
 
 // MARK: - CẤU HÌNH TABBAR
