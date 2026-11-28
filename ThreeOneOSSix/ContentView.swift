@@ -93,7 +93,8 @@ private struct LoopingBackgroundVideo: UIViewRepresentable {
 
     func makeUIView(context: Context) -> PlayerView {
         let view = PlayerView()
-        view.backgroundColor = .black
+        view.backgroundColor = .clear
+        view.playerLayer.backgroundColor = UIColor.clear.cgColor
         view.playerLayer.videoGravity = .resizeAspectFill
         configure(view, coordinator: context.coordinator)
         return view
@@ -320,7 +321,16 @@ struct HomeView: View {
                     if let raw = remoteTheme.config.homeBackgroundURL ?? remoteTheme.config.backgroundURL,
                        let url = URL(string: raw), url.scheme?.lowercased() == "https" {
                         if (remoteTheme.config.homeBackgroundType ?? remoteTheme.config.backgroundType) == "video" {
-                            LoopingBackgroundVideo(url: playableThemeVideoURL(url))
+                            ZStack {
+                                loadImageFromBundle(named: "background_home").resizable().scaledToFill()
+                                ZStack {
+                                loadImageFromBundle(named: "background_features").resizable().scaledToFill()
+                                ZStack {
+                                loadImageFromBundle(named: "background_settings").resizable().scaledToFill()
+                                LoopingBackgroundVideo(url: playableThemeVideoURL(url))
+                            }
+                            }
+                            }
                         } else {
                             AsyncImage(url: url) { image in
                                 image.resizable().scaledToFill()
