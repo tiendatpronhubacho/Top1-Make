@@ -100,15 +100,26 @@ enum AppBundlePatchService {
         if refresh {
             ContainerStore.refreshLaunchServicesSnapshot()
         }
-        guard let snapshot = ContainerStore.launchServicesSnapshot() else {
-            log("app-bundle: LaunchServices snapshot unavailable after refresh=\(refresh)")
-            return []
-        }
+        let snapshot = ContainerStore.launchServicesSnapshot()
         let metadata = ContainerStore.applicationBundleMetadataCatalog()
-        return snapshot.bundlePaths.compactMap { bundleID, rawPath in
+        let filesystemPaths = ContainerStore.applicationBundlePathCatalog()
+
+        // Prefer the LaunchServices mapping when available, then merge in
+        // independently discovered .app paths. This avoids making the entire
+        // screen depend on a single CSStore parser/layout.
+        var pathsByBundleID = filesystemPaths
+        if let snapshot {
+            for (bundleID, path) in snapshot.bundlePaths {
+                if validatedBundlePath(path, expectedBundleID: bundleID) != nil {
+                    pathsByBundleID[bundleID] = path
+                }
+            }
+        }
+
+        let apps = pathsByBundleID.compactMap { bundleID, rawPath -> InstalledAppBundle? in
             guard let path = validatedBundlePath(rawPath, expectedBundleID: bundleID) else { return nil }
             let info = metadata[bundleID]
-            let name = snapshot.displayName(forBundleID: bundleID)
+            let name = snapshot?.displayName(forBundleID: bundleID)
                 ?? info?.displayName
                 ?? bundleID
             return InstalledAppBundle(
@@ -120,6 +131,8 @@ enum AppBundlePatchService {
         }.sorted {
             $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
         }
+        log("app-bundle: discovered \(apps.count) apps (LaunchServices=\(snapshot?.bundlePaths.count ?? 0), filesystem=\(filesystemPaths.count))")
+        return apps
     }
 
     static func isApplied(projectID: UUID) -> Bool {
@@ -168,7 +181,9 @@ enum AppBundlePatchService {
     }
 
     private static func resolveBundleRoot(bundleID: String) throws -> URL {
-        guard let rawPath = ContainerStore.launchServicesSnapshot()?.bundlePaths[bundleID],
+        let snapshotPath = ContainerStore.launchServicesSnapshot()?.bundlePaths[bundleID]
+        let filesystemPath = ContainerStore.applicationBundlePathCatalog()[bundleID]
+        guard let rawPath = snapshotPath ?? filesystemPath,
               let path = validatedBundlePath(rawPath, expectedBundleID: bundleID) else {
             throw PatchPackageError.targetAppUnavailable(bundleID)
         }
