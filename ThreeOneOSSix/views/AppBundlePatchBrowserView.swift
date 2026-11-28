@@ -482,13 +482,11 @@ private struct AppBundlePathPickerView: View {
             List {
                 ForEach(entries) { entry in
                     if entry.isDirectory {
-                        NavigationLink {
-                            AppBundlePathDirectoryView(
-                                rootPath: rootPath,
-                                currentPath: entry.path,
-                                onSelect: onSelect
-                            )
-                        } label: {
+                        NavigationLink(destination: AnyView(AppBundlePathDirectoryView(
+                            rootPath: rootPath,
+                            currentPath: entry.path,
+                            onSelect: onSelect
+                        ))) {
                             Label(entry.name, systemImage: "folder")
                         }
                     } else {
