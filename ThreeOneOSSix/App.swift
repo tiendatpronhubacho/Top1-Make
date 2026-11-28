@@ -334,7 +334,7 @@ final class LicenseManager: ObservableObject {
     }
     // MARK: - Patch Authorization
 
-func authorizePatch(action: String) async throws {
+func authorizePatch(action: String, patchID: String? = nil) async throws {
     guard action == "patch_download" ||
           action == "patch_apply" else {
         throw LicenseFailure.server("invalid_patch_action")
@@ -368,7 +368,8 @@ func authorizePatch(action: String) async throws {
         action: action,
         deviceID: id,
         licenseKey: key,
-        buildHash: buildHash
+        buildHash: buildHash,
+        patchID: patchID
     )
 
     let signature = try signingKey
@@ -383,6 +384,9 @@ func authorizePatch(action: String) async throws {
         "signature": signature,
         "buildHash": buildHash
     ]
+    if action == "patch_apply", let patchID, !patchID.isEmpty {
+        payload["patchId"] = patchID
+    }
 
     let endpoint = action == "patch_download"
         ? "/v2/patch/authorize-download"
@@ -489,8 +493,10 @@ func authorizePatch(action: String) async throws {
         return SHA256.hash(data: Data(canonicalID.utf8)).map { String(format: "%02x", $0) }.joined()
     }
 
-    private func canonical(challenge: String, action: String, deviceID: String, licenseKey: String, buildHash: String) -> String {
-        "\(challenge)\n\(action)\n\(deviceID)\n\(licenseKey)\n\(buildHash)"
+    private func canonical(challenge: String, action: String, deviceID: String, licenseKey: String, buildHash: String, patchID: String? = nil) -> String {
+        let base = "\(challenge)\n\(action)\n\(deviceID)\n\(licenseKey)\n\(buildHash)"
+        guard action == "patch_apply", let patchID, !patchID.isEmpty else { return base }
+        return base + "\n" + patchID
     }
 
     private func requestChallenge(deviceID: String, action: String, buildHash: String) async throws -> String {
