@@ -28,7 +28,7 @@ private struct RemoteThemeConfig: Codable {
 private final class RemoteAppTheme: ObservableObject {
     static let shared = RemoteAppTheme()
     @Published private(set) var config = RemoteThemeConfig()
-    private let endpoint = URL(string: "https://ipa-device-server.dat1888haizz.workers.dev/v2/theme")!
+    private let endpoint = WorkerEndpoint.url("/v2/theme")
     private let cacheKey = "remote_app_theme_v1"
 
     private init() {
