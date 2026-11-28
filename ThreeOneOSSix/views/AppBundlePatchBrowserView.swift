@@ -120,7 +120,7 @@ enum AppBundlePatchService {
 
     static func apply(_ item: AppBundlePatchItem) throws {
         let root = try resolveBundleRoot(bundleID: item.bundleID)
-        try withBundleGrant(root: root) {
+        try withBundleGrant(root: root, expectedBundleID: item.bundleID) {
             _ = try PatchTransaction.apply(
                 project: item.project,
                 backupRoot: try AppBundlePatchLibrary.backupRootURL(),
@@ -187,7 +187,7 @@ enum AppBundlePatchService {
         return canonical
     }
 
-    private static func withBundleGrant<T>(root: URL, operation: () throws -> T) throws -> T {
+    private static func withBundleGrant<T>(root: URL, expectedBundleID: String, operation: () throws -> T) throws -> T {
         // iOS 17/18 kernel backend already has filesystem access. Newer backends
         // must grant the actual .app root with write intent and retain the token
         // for the entire transaction. A successful grant is not treated as proof
@@ -203,7 +203,7 @@ enum AppBundlePatchService {
         let infoURL = root.appendingPathComponent("Info.plist")
         guard let data = try? Data(contentsOf: infoURL),
               let plist = (try? PropertyListSerialization.propertyList(from: data, options: [], format: nil)) as? [String: Any],
-              (plist["CFBundleIdentifier"] as? String) != nil else {
+              (plist["CFBundleIdentifier"] as? String) == expectedBundleID else {
             throw PatchPackageError.targetAppUnavailable(root.lastPathComponent)
         }
         return try operation()
