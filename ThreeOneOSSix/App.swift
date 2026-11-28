@@ -551,6 +551,22 @@ func authorizePatch(action: String, patchID: String? = nil) async throws {
         guard !data.isEmpty else { throw LicenseFailure.server("replacement_download_empty") }
         return data
     }
+    func authorizeReplacementFileApply(fileID: String, bundleID: String) async throws {
+        guard isLicensed else { throw LicenseFailure.server("license_invalid") }
+        guard let key = try keychainRead(account: LicenseConfig.licenseAccount), !key.isEmpty else { isLicensed = false; throw LicenseFailure.server("license_invalid") }
+        let id = try getOrCreateDeviceID(); deviceID = id
+        let signingKey = try getOrCreateSigningKey()
+        let buildHash = try currentBuildHash()
+        let challenge = try await requestChallenge(deviceID: id, action: "replacement_apply", buildHash: buildHash)
+        let message = canonical(challenge: challenge, action: "replacement_apply", deviceID: id, licenseKey: key, buildHash: buildHash, replacementFileID: fileID)
+        let signature = try signingKey.signature(for: Data(message.utf8)).rawRepresentation.base64EncodedString()
+        let result: LicenseResult = try await post("/v2/replacement/authorize-apply", payload: [
+            "deviceId": id, "licenseKey": key, "replacementFileId": fileID, "bundleId": bundleID,
+            "challenge": challenge, "signature": signature, "buildHash": buildHash
+        ])
+        guard result.ok else { throw LicenseFailure.server(result.error ?? "replacement_apply_denied") }
+    }
+
     func deactivateLocalKey() {
         try? keychainDelete(account: LicenseConfig.licenseAccount)
         isLicensed = false
