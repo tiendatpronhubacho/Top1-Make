@@ -265,6 +265,30 @@ private struct PatchDownloadAuthorization: Decodable {
     let error: String?
 }
 
+struct WorkerReplacementFile: Decodable, Identifiable {
+    let id: String
+    let name: String
+    let bundleID: String
+    let relativePath: String
+    let assetName: String
+    let sizeBytes: Int64
+    let sha256: String
+    var identifiableID: String { id }
+    enum CodingKeys: String, CodingKey {
+        case id, name, sha256
+        case bundleID = "bundle_id"
+        case relativePath = "relative_path"
+        case assetName = "asset_name"
+        case sizeBytes = "size_bytes"
+    }
+}
+
+private struct ReplacementDownloadAuthorization: Decodable {
+    let ok: Bool
+    let ticket: String?
+    let error: String?
+}
+
 @MainActor
 final class LicenseManager: ObservableObject {
     @Published private(set) var isLicensed = false
@@ -479,6 +503,54 @@ func authorizePatch(action: String, patchID: String? = nil) async throws {
         return data
     }
 
+    func listReplacementFiles(bundleID: String) async throws -> [WorkerReplacementFile] {
+        let buildHash = try currentBuildHash()
+        var components = URLComponents(url: WorkerEndpoint.url("/v2/replacement-files"), resolvingAgainstBaseURL: false)!
+        components.queryItems = [URLQueryItem(name: "bundleId", value: bundleID), URLQueryItem(name: "buildHash", value: buildHash)]
+        var request = URLRequest(url: components.url!)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 30
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw LicenseFailure.network }
+        guard (200..<300).contains(http.statusCode) else {
+            let code = (try? JSONDecoder().decode(LicenseResult.self, from: data))?.error ?? "replacement_list_http_\(http.statusCode)"
+            throw LicenseFailure.server(code)
+        }
+        struct Envelope: Decodable { let ok: Bool; let files: [WorkerReplacementFile] }
+        let envelope = try JSONDecoder().decode(Envelope.self, from: data)
+        guard envelope.ok else { throw LicenseFailure.server("replacement_list_denied") }
+        return envelope.files
+    }
+
+    func downloadReplacementFileData(fileID: String, bundleID: String) async throws -> Data {
+        guard isLicensed else { throw LicenseFailure.server("license_invalid") }
+        guard let key = try keychainRead(account: LicenseConfig.licenseAccount), !key.isEmpty else { isLicensed = false; throw LicenseFailure.server("license_invalid") }
+        let id = try getOrCreateDeviceID(); deviceID = id
+        let signingKey = try getOrCreateSigningKey()
+        let buildHash = try currentBuildHash()
+        let challenge = try await requestChallenge(deviceID: id, action: "replacement_download", buildHash: buildHash)
+        let message = canonical(challenge: challenge, action: "replacement_download", deviceID: id, licenseKey: key, buildHash: buildHash, replacementFileID: fileID)
+        let signature = try signingKey.signature(for: Data(message.utf8)).rawRepresentation.base64EncodedString()
+        let authorization: ReplacementDownloadAuthorization = try await post("/v2/replacement/authorize-download", payload: [
+            "deviceId": id, "licenseKey": key, "replacementFileId": fileID, "bundleId": bundleID,
+            "challenge": challenge, "signature": signature, "buildHash": buildHash
+        ])
+        guard authorization.ok, let ticket = authorization.ticket, !ticket.isEmpty else { throw LicenseFailure.server(authorization.error ?? "replacement_authorization_denied") }
+        var request = URLRequest(url: WorkerEndpoint.url("/v2/replacement/download"))
+        request.httpMethod = "GET"; request.timeoutInterval = 90
+        request.setValue(ticket, forHTTPHeaderField: "X-Download-Ticket")
+        request.setValue(id, forHTTPHeaderField: "X-Device-Id")
+        request.setValue("application/octet-stream", forHTTPHeaderField: "Accept")
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw LicenseFailure.network }
+        guard (200..<300).contains(http.statusCode) else {
+            let code = (try? JSONDecoder().decode(LicenseResult.self, from: data))?.error ?? "replacement_download_http_\(http.statusCode)"
+            throw LicenseFailure.server(code)
+        }
+        guard !data.isEmpty else { throw LicenseFailure.server("replacement_download_empty") }
+        return data
+    }
     func deactivateLocalKey() {
         try? keychainDelete(account: LicenseConfig.licenseAccount)
         isLicensed = false
@@ -519,10 +591,10 @@ func authorizePatch(action: String, patchID: String? = nil) async throws {
         return SHA256.hash(data: Data(canonicalID.utf8)).map { String(format: "%02x", $0) }.joined()
     }
 
-    private func canonical(challenge: String, action: String, deviceID: String, licenseKey: String, buildHash: String, patchID: String? = nil) -> String {
+    private func canonical(challenge: String, action: String, deviceID: String, licenseKey: String, buildHash: String, patchID: String? = nil, replacementFileID: String? = nil) -> String {
         let base = "\(challenge)\n\(action)\n\(deviceID)\n\(licenseKey)\n\(buildHash)"
-        guard (action == "patch_apply" || action == "patch_download"),
-              let patchID, !patchID.isEmpty else { return base }
+        if action == "replacement_download", let replacementFileID, !replacementFileID.isEmpty { return base + "\n" + replacementFileID }
+        guard (action == "patch_apply" || action == "patch_download"), let patchID, !patchID.isEmpty else { return base }
         return base + "\n" + patchID
     }
 
