@@ -146,6 +146,7 @@ jobs:
           forbidden = (
               b"https://ipa-device-server.dat1888haizz.workers.dev/admin",
               b"http://ipa-device-server.dat1888haizz.workers.dev/admin",
+              b"ipa-device-server.dat1888haizz.workers.dev",
           )
 
           with zipfile.ZipFile(ipa_path) as ipa:
@@ -159,7 +160,7 @@ jobs:
                               "ERROR: Admin URL found in IPA: " + entry.filename
                           )
 
-          print("OK: Admin URL is not embedded in the IPA.")
+          print("OK: Worker hostname and Admin URL are not embedded as plaintext in the IPA.")
           PY
 
       - name: Upload IPA and build products
