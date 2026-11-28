@@ -737,3 +737,171 @@ private func directoryEntries(at path: String) throws -> [FileEntry] {
         return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
     }
 }
+
+
+// MARK: - Server replacement files shown directly in the Location category
+
+struct LocationReplacementFilesView: View {
+    private let bundleID = "com.garena.ffvn"
+    @ObservedObject var licenseManager: LicenseManager
+    @State private var files: [WorkerReplacementFile] = []
+    @State private var localItems: [AppBundlePatchItem] = []
+    @State private var isLoading = false
+    @State private var busyIDs: Set<String> = []
+    @State private var errorMessage: String?
+
+    var body: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Label("FILE THAY THẾ", systemImage: "mappin.and.ellipse")
+                    .font(.system(size: 12, weight: .black, design: .rounded))
+                    .foregroundStyle(.white)
+                Spacer()
+                Button {
+                    Task { await loadFiles() }
+                } label: {
+                    if isLoading {
+                        ProgressView().tint(.white)
+                    } else {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                }
+                .disabled(isLoading || !busyIDs.isEmpty)
+                .foregroundStyle(.white)
+            }
+
+            if isLoading && files.isEmpty {
+                ProgressView("Đang tải danh sách…")
+                    .tint(.white)
+                    .foregroundStyle(.white)
+                    .padding(.vertical, 24)
+            } else if files.isEmpty {
+                Text("Chưa có file thay thế đang bật cho Free Fire VN.")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.7))
+                    .padding(.vertical, 24)
+            } else {
+                ForEach(files) { file in
+                    replacementRow(file)
+                }
+            }
+
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.orange)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .padding(14)
+        .background(Color.white.opacity(0.10), in: RoundedRectangle(cornerRadius: 18))
+        .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.white.opacity(0.24), lineWidth: 0.7))
+        .task { await loadFiles() }
+    }
+
+    @ViewBuilder
+    private func replacementRow(_ file: WorkerReplacementFile) -> some View {
+        let item = localItems.first(where: { $0.remoteFileID == file.id })
+        let applied = item.map { AppBundlePatchService.isApplied(projectID: $0.id) } ?? false
+        HStack(spacing: 12) {
+            Image(systemName: "location.fill")
+                .font(.system(size: 17, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 40, height: 40)
+                .background(Color.white.opacity(0.13), in: RoundedRectangle(cornerRadius: 11))
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(file.name)
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                Text(file.relativePath)
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.62))
+                    .lineLimit(2)
+            }
+            Spacer(minLength: 4)
+            if busyIDs.contains(file.id) {
+                ProgressView().tint(.white)
+            } else {
+                Toggle(file.name, isOn: Binding(
+                    get: { applied },
+                    set: { enabled in toggle(file, enabled: enabled) }
+                ))
+                .labelsHidden()
+                .tint(.green)
+                .fixedSize()
+            }
+        }
+        .padding(12)
+        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
+    }
+
+    @MainActor
+    private func loadFiles() async {
+        guard !isLoading else { return }
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+        do {
+            files = try await licenseManager.listReplacementFiles(bundleID: bundleID)
+            localItems = AppBundlePatchLibrary.load(bundleID: bundleID)
+        } catch {
+            errorMessage = "Không tải được danh sách file: \(error.localizedDescription)"
+        }
+    }
+
+    private func toggle(_ file: WorkerReplacementFile, enabled: Bool) {
+        guard !busyIDs.contains(file.id) else { return }
+        busyIDs.insert(file.id)
+        errorMessage = nil
+        Task { @MainActor in
+            do {
+                var item = localItems.first(where: { $0.remoteFileID == file.id })
+                if enabled {
+                    if item == nil {
+                        let data = try await licenseManager.downloadReplacementFileData(
+                            fileID: file.id,
+                            bundleID: bundleID
+                        )
+                        guard let uuid = UUID(uuidString: file.id) else {
+                            throw NSError(
+                                domain: "ReplacementFile",
+                                code: 1,
+                                userInfo: [NSLocalizedDescriptionKey: "ID file từ máy chủ không hợp lệ."]
+                            )
+                        }
+                        let downloaded = AppBundlePatchItem(
+                            id: uuid,
+                            name: file.name,
+                            bundleID: bundleID,
+                            relativePath: file.relativePath,
+                            replacementFilename: file.assetName,
+                            replacementData: data,
+                            createdAt: Date(),
+                            remoteFileID: file.id
+                        )
+                        try AppBundlePatchLibrary.save(downloaded)
+                        item = downloaded
+                    }
+                    guard let item else { throw PatchPackageError.applyFailed }
+                    try await licenseManager.authorizeReplacementFileApply(
+                        fileID: file.id,
+                        bundleID: bundleID
+                    )
+                    try await Task.detached(priority: .userInitiated) {
+                        try AppBundlePatchService.apply(item)
+                    }.value
+                } else {
+                    guard let item else { throw PatchPackageError.restoreFailed }
+                    try await Task.detached(priority: .userInitiated) {
+                        try AppBundlePatchService.restore(item)
+                    }.value
+                }
+                localItems = AppBundlePatchLibrary.load(bundleID: bundleID)
+            } catch {
+                errorMessage = "Không thể \(enabled ? "bật" : "tắt") \(file.name): \(error.localizedDescription)"
+            }
+            busyIDs.remove(file.id)
+        }
+    }
+}
