@@ -45,6 +45,7 @@ private final class RemoteAppTheme: ObservableObject {
         if let data = UserDefaults.standard.data(forKey: cacheKey),
            let cached = try? JSONDecoder().decode(RemoteThemeConfig.self, from: data) {
             config = cached
+            AudioManager.shared.applyRemoteSettings(enabled: cached.musicEnabled ?? true, volume: cached.musicVolume ?? 0.5, url: cached.musicURL)
         }
         Task { await refresh() }
     }
