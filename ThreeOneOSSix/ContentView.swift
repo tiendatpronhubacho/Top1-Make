@@ -9,6 +9,8 @@ private struct RemoteThemeEnvelope: Decodable {
 private struct RemoteThemeConfig: Codable {
     var musicEnabled: Bool?
     var musicVolume: Double?
+    var announcementEnabled: Bool?
+    var announcement: String?
     var musicURL: String?
     var title: String?
     var subtitle: String?
@@ -339,6 +341,21 @@ struct HomeView: View {
                             Text(remoteTheme.config.subtitle ?? "PATCH CONTROL CENTER").font(.system(size: 10, weight: .bold, design: .rounded)).tracking(1.7).foregroundStyle(.white.opacity(0.8))
                         }
                         Spacer()
+                    }
+                    if remoteTheme.config.announcementEnabled == true,
+                       let announcement = remoteTheme.config.announcement?.trimmingCharacters(in: .whitespacesAndNewlines),
+                       !announcement.isEmpty {
+                        HStack(alignment: .top, spacing: 10) {
+                            Image(systemName: "megaphone.fill")
+                                .foregroundStyle(Color(remoteHex: remoteTheme.config.accent))
+                            Text(announcement)
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .padding(12)
+                        .background(Color.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 14))
+                        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color(remoteHex: remoteTheme.config.accent).opacity(0.5), lineWidth: 0.8))
                     }
                     
                     VStack(spacing: 0) {
