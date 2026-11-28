@@ -136,6 +136,32 @@ jobs:
           cd build/ios/ipa
           /usr/bin/zip -qry IpaProxy-unsigned.ipa Payload
 
+      - name: Verify Admin URL is not embedded in IPA
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import zipfile
+
+          ipa_path = "build/ios/ipa/IpaProxy-unsigned.ipa"
+          forbidden = (
+              b"https://ipa-device-server.dat1888haizz.workers.dev/admin",
+              b"http://ipa-device-server.dat1888haizz.workers.dev/admin",
+          )
+
+          with zipfile.ZipFile(ipa_path) as ipa:
+              for entry in ipa.infolist():
+                  if entry.is_dir():
+                      continue
+                  data = ipa.read(entry)
+                  for value in forbidden:
+                      if value in data:
+                          raise SystemExit(
+                              "ERROR: Admin URL found in IPA: " + entry.filename
+                          )
+
+          print("OK: Admin URL is not embedded in the IPA.")
+          PY
+
       - name: Upload IPA and build products
         uses: actions/upload-artifact@v4
         with:
